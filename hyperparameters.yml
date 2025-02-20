@@ -1,0 +1,18 @@
+# version - itteration - run
+v000.001.001:
+  envParams:
+    S0: 10
+    B0: 0.046
+    K: 10
+    T: .08333 # 1/12
+    mu: 0.1
+    sigma: 0.2
+    r: 0.00
+    epsilon: .005
+    alpha0: 0
+    max_alpha: 3.0
+    Ndt: 100
+
+  algoParams:
+    algo_id: DQN
+    
