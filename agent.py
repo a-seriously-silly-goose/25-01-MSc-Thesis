@@ -52,7 +52,10 @@ class ActorCriticPG():
         self.LOG_FILE = LOG_FILE
         self.V_MODEL_FILE = os.path.join(self.repo, f'V {hyperparameter_set}.pt')
         self.PI_MODEL_FILE = os.path.join(self.repo, f'Pi {hyperparameter_set}.pt')
-        self.GRAPH_FILE = os.path.join(self.repo, f'{hyperparameter_set}.png')
+        self.GRAPH_FILE1 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT1.png')
+        self.GRAPH_FILE2 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT2.png')
+        self.GRAPH_FILE3 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT3.png')
+        self.GRAPH_FILE4 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT4.png')
 
     def select_actions(self,
                        S_t,
@@ -89,8 +92,8 @@ class ActorCriticPG():
         
         
         # get actions
-        u_t = T.maximum(T.ones(1)*-self.env.params["max_alpha"], \
-                        T.minimum(T.ones(1)*self.env.params["max_alpha"], \
+        u_t = T.maximum(T.ones(1, device = self.device)*-self.env.params["max_alpha"], \
+                        T.minimum(T.ones(1, device = self.device)*self.env.params["max_alpha"], \
                                     actions_sample.squeeze(-1)))
 
         # get log-probabilities of the action
@@ -240,15 +243,21 @@ class ActorCriticPG():
             v_target[:, :-1] = self.risk_measure.compute_risk(cost_t + v_tp1)
             
             # calculate the loss function
-            v_loss = self.V.loss(v_target.detach(), v_pred).to(self.device)
+            v_target = v_target.detach().to(self.device)
+            v_loss = self.V.loss(v_target, v_pred).to(self.device)
             v_loss.backward()
             self.V.optimizer.step()
-            self.loss_history_V.append(v_loss.detach().numpy())
+            self.loss_history_V.append(v_loss.detach())
         
             # print progress
+
             if epoch % self.loss_print == 0 or epoch == Nepochs - 1:
+                loss_history = self.loss_history_V[-self.loss_trail:]
+                loss_history_cpu = [loss.cpu().detach().numpy() for loss in loss_history]  # Move tensor to CPU and detach from graph
+                mean_loss = np.mean(loss_history_cpu)
+
                 log_message= f" Epoch = {str(epoch)}, " \
-                             f" Loss: {str(np.round( np.mean(self.loss_history_V[-self.loss_trail:]) ,3))}"
+                             f" Loss: {str(mean_loss)}"
                 print(log_message)
                 with open(self.LOG_FILE, 'a') as file:
                     file.write(log_message+'\n')
@@ -305,12 +314,15 @@ class ActorCriticPG():
             self.policy.optimizer.step()
 
             # store the loss
-            self.loss_history_policy.append(loss.detach().numpy())
+            self.loss_history_policy.append(loss.detach())
 
             # print progress
             if epoch % self.loss_print == 0 or epoch == Nepochs - 1:
+                loss_history = self.loss_history_policy[-self.loss_trail:]
+                loss_history_cpu = [loss.cpu().detach().numpy() for loss in loss_history]  # Move tensor to CPU and detach from graph
+                mean_loss = np.mean(loss_history_cpu)
                 log_message = f'   Epoch =  {str(epoch)} , '\
-                              f' Loss: {str(np.round( np.mean(self.loss_history_policy[-self.loss_trail:]) ,3))}'
+                              f' Loss: {mean_loss}'
                 print(log_message)
                 with open(self.LOG_FILE, 'a') as file:
                     file.write(log_message+'\n')
@@ -353,7 +365,7 @@ class ActorCriticPG():
         plt.colorbar()
         plt.tight_layout()
         now = datetime.now()
-        plt.savefig(self.GRAPH_FILE, transparent=True)
+        plt.savefig(self.GRAPH_FILE1, transparent=True)
         plt.clf()
 
 
@@ -367,6 +379,7 @@ class ActorCriticPG():
                 obs = T.stack((S_val*T.ones(1),
                                 fixed_alpha*T.ones(1),
                                 time_val*T.ones(1)), -1)
+                obs = obs.to(self.device)
                 hist2dim_V[len(self.env.spaces["S_space"])-S_idx-1, time_idx] = self.V(obs)
 
         # plot the value function
@@ -386,5 +399,5 @@ class ActorCriticPG():
         plt.colorbar()
         plt.tight_layout()
         now = datetime.now()
-        plt.savefig(self.GRAPH_FILE, transparent=True)
+        plt.savefig(self.GRAPH_FILE2, transparent=True)
         plt.clf()

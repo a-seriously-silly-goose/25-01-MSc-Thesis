@@ -89,6 +89,8 @@ algoParams["lr_V"] = float(algoParams["lr_V"])
 
 # Create repository for storing result
 repo = os.path.join(RUNS_DIR, repo_name)
+if not os.path.exists(repo):
+    os.makedirs(repo)
 LOG_FILE = os.path.join(repo, f'{hyperparameters_version}.log')
 with open(LOG_FILE,'w') as file:
     file.write(log_message + '\n')
@@ -155,7 +157,7 @@ for idx_method, method in enumerate(rm_list):
         actor_critic.V.load_state_dict(T.load(data_repo + '/' + method + '/V_model.pt'))
 
     ## TRAINING PHASE
-    # first estimate of the value function
+    # Algo 1: Step 1: Estimate initial Value function
     actor_critic.estimate_V(Ntrajectories=algoParams["Ntrajectories"],
                                 Mtransitions=algoParams["Mtransitions"],
                                 batch_size=algoParams["batch_V"],
@@ -167,14 +169,14 @@ for idx_method, method in enumerate(rm_list):
     actor_critic.plot_current_policy()
 
     for epoch in range(algoParams["Nepochs"]):
-        # estimate the value function of the current policy
+        # Algo 1, Steps 4-6 + Algo 2
         actor_critic.estimate_V(Ntrajectories=algoParams["Ntrajectories"],
                                     Mtransitions=algoParams["Mtransitions"],
                                     batch_size=algoParams["batch_V"],
                                     Nepochs=algoParams["Nepochs_V"],
                                     rng_seed=algoParams["seed"])
         
-        # update the policy by policy gradient
+        # Algo 1, Steps 7-8 + Algo 3
         actor_critic.update_policy(Ntrajectories=algoParams["Ntrajectories"],
                                     Mtransitions=algoParams["Mtransitions"],
                                     batch_size=algoParams["batch_pi"],
@@ -194,7 +196,7 @@ for idx_method, method in enumerate(rm_list):
             actor_critic.plot_current_V()
             actor_critic.plot_current_policy()
 
-        # save progress
+        # Algo 1, Step 9: save progress
         if epoch % save_progress == 0:
             now = datetime.now()
             # save the neural network

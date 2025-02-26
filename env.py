@@ -2,6 +2,8 @@ import torch as T
 import numpy as np
 import pdb
 
+device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+
 class BlackScholesEnv():
     def __init__(self, params):
         self.params = params
@@ -58,14 +60,14 @@ class BlackScholesEnv():
         # interest rate on the bank account
         B_tp1 = B_tplus * np.exp(self.params["r"]*dt)
 
-        # Reward calculation
-        r = B_tp1 - B_t + alpha_tm1* S_t - alpha_t * S_tp1
+        # Reward calculation (wealth at time t+1 - wealth at time t) 
+        r = B_tp1 + alpha_t * S_tp1 - (B_t + alpha_tm1* S_t)
 
         return S_tp1, alpha_t, B_tp1, -r
 
     # payoff of the option
     def option_price(self, S):
-        return T.maximum(self.params["K"]- S, T.zeros(1))
+        return T.maximum(self.params["K"]- S, T.zeros(1, device=self.device))
 
     # settlement of the option
     def settlement (self, S_T, alpha_Tm1, B_T):
