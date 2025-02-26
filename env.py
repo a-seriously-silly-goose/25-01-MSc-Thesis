@@ -14,9 +14,8 @@ class BlackScholesEnv():
                                     params["B0"]+params["S0"]*params["max_alpha"], 31)
             }
 
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-
-    #define print 
+        self.device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+ 
     def __repr__(self):
         return f"BlackScholesEnv({self.params})"
 
@@ -25,7 +24,20 @@ class BlackScholesEnv():
         B0 = self.params["B0"]*T.ones(Nsims).to(self.device)
         alpha = T.zeros(Nsims).to(self.device)
         
-        return S0, B0, alpha
+        return S0, alpha, B0
+
+    def random_reset( self, time, Nsims=1):
+        if time == self.spaces["t_space"][0]:
+            S0, alpha_m1, B0 = self.reset(Nsims)
+        else:
+            S0 = self.params["S0"] * \
+                    T.exp((self.params['mu']- .5 *self.params["sigma"]**2)* self.params['T'] + \
+                    self.params["sigma"] * np.sqrt(self.params['T'])*T.randn(size = (Nsims,), device=self.device))
+            alpha_m1 = -self.params["max_alpha"] + 2*self.params["max_alpha"] * \
+                        T.rand(size=(Nsims,), device=self.device)
+            B0 = -(self.params["S0"]*alpha_m1) + 0.75*T.randn(size=(Nsims,), device=self.device)
+
+        return S0, alpha_m1, B0
 
     def step(self, S_t, alpha_tm1, B_t, alpha_t):
         Nsims = S_t.shape[0]
