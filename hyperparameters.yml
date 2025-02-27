@@ -1,3 +1,48 @@
+
+# version - itteration - run
+# fixed wealth update
+v001.002.001:
+  envParams:
+    S0: 10 # initial stock price
+    B0: 0.001 # initial bank account
+    K: 10 # strike price (at parity)
+    T: .08333 # 1/12 # time to maturity
+    mu: 0.1 # drift in GBM
+    sigma: 0.2 # volatility in GBM
+    r: 0.00 # risk-free rate
+    epsilon: .005 # transaction cost
+    alpha0: 0 # initial position
+    max_alpha: 5 # maximum position
+    Ndt: 100 # number of time steps
+
+  algoParams:
+   # note: the next two must match!
+    Ntrajectories : 200 # number of generated trajectories
+    Mtransitions : 200 # number of additional transitions for each state
+    Nepochs : 400 # number of epochs of the whole algorithm
+    gamma : .99 # discount factor
+    seed : 42 # (int or None) set seed for replication purposes
+
+    Nepochs_V_init : 1500 # number of epochs for the estimation of V during the first epoch
+    Nepochs_V : 300 # number of epochs for the estimation of V
+    lr_V : 5e-4 # learning rate of the neural net associated with V
+    batch_V : 200 # number of trajectories for each mini-batch in estimating V
+    hidden_V : 16 # number of hidden nodes in the neural net associated with V
+    layers_V : 4 # number of layers in the neural net associated with V
+    
+    Nepochs_pi : 20 # number of epoch for the update of pi
+    lr_pi : 5e-4 # learning rate of the neural net associated with pi
+    batch_pi : 200 # number of trajectories for each mini-batch when updating pi
+    hidden_pi : 16 # number of hidden nodes in the neural net associated with pi
+    layers_pi : 3 # number of layers in the neural net associated with pi
+    
+  riskParams:
+    method: 'CVaR'
+  
+  runParams:
+
+
+
 # version - itteration - run
 # ready for GC run
 v001.001.001:
