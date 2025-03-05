@@ -258,7 +258,7 @@ plt.clf()
 ### PLOT - Payoff at the terminal time
 for idx_method, method in enumerate(rm_list):
     plt.scatter(finalprice[:,idx_method],
-                rewards_total[:,idx_method] + np.maximum(finalprice[:,idx_method] - env.params["K"], 0),
+                -rewards_total[:,idx_method] + np.maximum( env.params["K"]-finalprice[:,idx_method] , 0),
                 alpha=0.15,
                 s=2,
                 color=utils.mred)    
