@@ -66,3 +66,26 @@
  Epoch = 50,  Loss: 0.032898095
  Epoch = 100,  Loss: 0.031441838
  Epoch = 150,  Loss: 0.030269071
+ Epoch = 200,  Loss: 0.02926154
+ Epoch = 250,  Loss: 0.028387027
+ Epoch = 299,  Loss: 0.02764594
+--Update of pi--
+   Epoch =  0 ,  Loss: 0.016258519142866135
+   Epoch =  19 ,  Loss: 0.016259584575891495
+--Estimation of V--
+ Epoch = 0,  Loss: 0.027632166
+ Epoch = 50,  Loss: 0.026901865
+ Epoch = 100,  Loss: 0.02624492
+ Epoch = 150,  Loss: 0.025870794
+ Epoch = 200,  Loss: 0.025751656
+ Epoch = 250,  Loss: 0.025763573
+ Epoch = 299,  Loss: 0.0258623
+--Update of pi--
+   Epoch =  0 ,  Loss: 0.016282498836517334
+   Epoch =  19 ,  Loss: 0.016294818371534348
+--Estimation of V--
+ Epoch = 0,  Loss: 0.025865197
+ Epoch = 50,  Loss: 0.025923604
+ Epoch = 100,  Loss: 0.026032116
+ Epoch = 150,  Loss: 0.026544727
+ Epoch = 200,  Loss: 0.026881164

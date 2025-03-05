@@ -145,6 +145,10 @@ for idx_method, method in enumerate(rm_list):
     actor_critic.policy.load_state_dict(T.load(repo + '/Pi '+ hyperparameters_version+'.pt',map_location=T.device('cpu'), weights_only=True))
     actor_critic.V.load_state_dict(T.load(repo + '/V '+ hyperparameters_version+'.pt',map_location=T.device('cpu'), weights_only=True))
 
+    #print poplicies and value functions
+    actor_critic.plot_current_V()
+    actor_critic.plot_current_policy()
+
     # print progress
     print('*** Training phase completed! ***')
 
