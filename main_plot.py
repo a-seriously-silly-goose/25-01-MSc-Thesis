@@ -15,81 +15,29 @@ import torch as T
 import torch.optim as optim
 # personal files
 import utils
+import hyperparams
 from models import PolicyApprox, ValueApprox
-from risk_measures import RiskMeasure
-from env import BlackScholesEnv
-from agent import ActorCriticPG
+from risk_measure import RiskMeasure
+from envs import HedgingEnv
+from actor_critic import ActorCriticPG
 # misc
 import time
 import os
 import pdb # use with set_trace() for the debugger
-import argparse
-import yaml
+
 """
 Parameters
 """
 
-# Parse command line inputs
-parser = argparse.ArgumentParser(description='Train or test model.')
-parser.add_argument('hyperparameters', help='')
-parser.add_argument('--train', help='Training mode', action='store_true')
-parser.add_argument('--preload', help='Should the existing model be preloaded', action='store_true')
-args = parser.parse_args()
-
-preload= args.preload
-hyperparameters_version = args.hyperparameters
-is_training = args.train
-print('Hyperparameter set:', hyperparameters_version)
-with open('hyperparameters.yml','r') as file:
-    all_hyperparameter_sets = yaml.safe_load(file)
-    hyperparameters = all_hyperparameter_sets[hyperparameters_version]
-
-envParams = hyperparameters['envParams']
-algoParams = hyperparameters['algoParams']
-riskParams = hyperparameters['riskParams']
-runParams = hyperparameters['runParams']
-repo_name = hyperparameters_version
+# running on a personal computer or a Compute Canada server
+computer = 'personal' # 'cluster' | 'personal'
 
 # risk measures used
-rm_list = ['CVaR'] # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
-alpha_cvar = [ 0.2] # threshold for the conditional value-at-risk
-kappa_semidev = [ -99] # coefficient for the mean semideviation
-r_semidev = [-99] # exponent of the mean-semideviation
+# 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
+rm_list = ['mean', 'CVaR0.2', 'CVaR0.2-pen0.2']
 
-
-print_progress = 200 # number of epochs before printing the time/loss
-plot_progress = 50 # number of epochs before plotting the policy/value function
-save_progress = 100 # number of epochs before saving the policy/value function ANNs
-
-"""
-End of Parameters
-"""
-
-# print all parameters for reproducibility purposes
-log_message =f'*** Name of the repository:  {repo_name} ***\n'\
-            f'*** Environment parameters:  {envParams} ***\n'\
-            f'*** Algorithm parameters:  {algoParams} ***\n'\
-            f'*** Risk measures parameters:  {riskParams} ***\n'\
-            f'*** Run parameters:  {runParams} ***\n'\
-            f'*** Risk measures:  {rm_list} ***\n'\
-            f'*** alpha_cvar:  {alpha_cvar}'
-
-print(log_message)
-
-# Ensure learning rates are converted to float
-algoParams["lr_pi"] = float(algoParams["lr_pi"])
-algoParams["lr_V"] = float(algoParams["lr_V"])
-
-# Check if preloading is required
-#preload = runParams.get("preload", False)
-#data_repo = runParams.get("data_repo", "")
-
-# Create repository for storing result
-repo = os.path.join('runs', repo_name)
-if not os.path.exists(repo):
-    os.makedirs(repo)
-LOG_FILE = os.path.join(repo, f'{hyperparameters_version}_plot.log')
-
+# parameters for the model and algorithm
+repo_name, envParams, algoParams = hyperparams.initParams()
 
 seed = 4321 # set seed for replication purposes
 
@@ -106,6 +54,15 @@ End of Parameters
 
 # print all parameters for reproducibility purposes
 print('\n*** Name of the repository: ', repo_name, ' ***\n')
+hyperparams.printParams(envParams, algoParams)
+
+# create a new directory
+if(computer == 'personal'): # personal computer
+    repo = repo_name
+if(computer == 'cluster'): # Compute Canada server
+    data_dir = os.getenv("HOME")
+    output_dir = os.getenv("SCRATCH")
+    repo = output_dir + '/' + repo_name
 
 utils.directory(repo)
 
@@ -118,7 +75,7 @@ for idx_method, method in enumerate(rm_list):
     start_time = time.time()
 
     # create the (temporary) environment and risk measure objects
-    env = BlackScholesEnv(envParams)
+    env = HedgingEnv(envParams)
     risk_measure = RiskMeasure(Type='mean')
 
     # create policy & value function objects
@@ -134,20 +91,16 @@ for idx_method, method in enumerate(rm_list):
 
     # initialize the actor-critic algorithm
     actor_critic = ActorCriticPG(repo=repo,
+                                    method = method,
                                     env=env,
                                     policy=policy,
                                     V=value_function,
                                     risk_measure=risk_measure,
-                                    hyperparameter_set=hyperparameters_version,
-                                    LOG_FILE=LOG_FILE)
+                                    gamma=algoParams["gamma"])
 
     # load the trained model
-    actor_critic.policy.load_state_dict(T.load(repo + '/Pi '+ hyperparameters_version+'.pt',map_location=T.device('cpu'), weights_only=True))
-    actor_critic.V.load_state_dict(T.load(repo + '/V '+ hyperparameters_version+'.pt',map_location=T.device('cpu'), weights_only=True))
-
-    #print poplicies and value functions
-    actor_critic.plot_current_V()
-    actor_critic.plot_current_policy()
+    actor_critic.policy.load_state_dict(T.load(repo + '/' + method + '/policy_model.pt'))
+    actor_critic.V.load_state_dict(T.load(repo + '/' + method + '/V_model.pt'))
 
     # print progress
     print('*** Training phase completed! ***')
@@ -158,18 +111,18 @@ for idx_method, method in enumerate(rm_list):
     np.random.seed(seed)
 
     # initialize the starting state
-    S, alpha, B = env.reset(Nsimulations)
+    S, v, alpha, B = env.reset(Nsimulations)
     
     for timestep in env.spaces["t_space"][:-1]:
         # simulate transitions according to the policy
-        u, _ = actor_critic.select_actions(S, alpha, B, timestep*T.ones(Nsimulations), 'best')
-        S, alpha, B, cost = env.step(S, alpha, B, u)
+        u, _ = actor_critic.select_actions(S, v, alpha, B, timestep*T.ones(Nsimulations), 'best')
+        S, v, alpha, B, cost = env.step(S, v, alpha, B, u)
 
         # store costs
         costs[:,timestep,idx_method] = cost.detach().numpy()
 
     # get terminal reward
-    costs[:,-1,idx_method] = env.settlement(S, alpha, B).detach().numpy()
+    costs[:,-1,idx_method] = env.get_final_cost(S, v, alpha, B).detach().numpy()
     finalprice[:,idx_method] = S.detach().numpy()
 
     ### PLOT - policy wrt price and time
@@ -177,6 +130,7 @@ for idx_method, method in enumerate(rm_list):
     hist2dim_pi = np.zeros([len(env.spaces["S_space"]), len(env.spaces["t_space"])-1])
     
     # fixed values for other variables
+    fixed_v = env.params["theta"]
     fixed_alpha = 0.0
     fixed_B = env.params["B0"]
 
@@ -185,10 +139,11 @@ for idx_method, method in enumerate(rm_list):
             # mean of the Gaussian policy
             hist2dim_pi[len(env.spaces["S_space"])-S_idx-1, time_idx], _ = \
                     actor_critic.select_actions(T.Tensor([S_val]),
+                                                T.tensor([fixed_v]),
                                                 T.tensor([fixed_alpha]),
                                                 T.tensor([fixed_B]),
                                                 T.tensor([time_val]),
-                                                False)
+                                                'best')
 
     # plot the 2D histogram
     plt.imshow(hist2dim_pi,
@@ -262,7 +217,7 @@ plt.clf()
 ### PLOT - Payoff at the terminal time
 for idx_method, method in enumerate(rm_list):
     plt.scatter(finalprice[:,idx_method],
-                -rewards_total[:,idx_method] + np.maximum( env.params["K"]-finalprice[:,idx_method] , 0),
+                rewards_total[:,idx_method] + np.maximum(finalprice[:,idx_method] - env.params["K"], 0),
                 alpha=0.15,
                 s=2,
                 color=utils.mred)    
@@ -271,17 +226,6 @@ for idx_method, method in enumerate(rm_list):
     plt.ylabel("Bank account")
     plt.tight_layout()
     plt.savefig(repo + '/payoff_' + method + '.pdf', transparent=True)
-    plt.clf()
-
-
-### PLOT - Payoff at the terminal time
-for idx_method, method in enumerate(rm_list):
-    plt.hist((-rewards_total[:,idx_method] + np.maximum( env.params["K"]-finalprice[:,idx_method] , 0))**2,
-                alpha=0.15,
-                color=utils.mred)    
-    plt.title('Quadratic Hedging Error')
-    plt.tight_layout()
-    plt.savefig(repo + '/QHE_' + method + '.pdf', transparent=True)
     plt.clf()
 
 # print progress

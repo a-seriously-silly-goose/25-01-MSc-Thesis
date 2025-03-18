@@ -53,7 +53,7 @@ class PolicyApprox(nn.Module):
 
         # optimizer
         self.optimizer = optim.Adam(self.parameters(), lr=self.learn_rate) # SGD or Adam
-        self.device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
     
     # forward propagation
@@ -99,7 +99,7 @@ class ValueApprox(nn.Module):
         # optimizer
         self.optimizer = optim.Adam(self.parameters(), lr=self.learn_rate)
         self.loss = nn.MSELoss()
-        self.device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
     
     # forward propagation
