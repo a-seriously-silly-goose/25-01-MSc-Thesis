@@ -1,0 +1,11 @@
+*** Name of the repository:  v002.000.001 ***
+*** Environment parameters:  {'S0': 30, 'B0': 0, 'K': 30, 'T': 0.08333333, 'mu': 0.1, 'sigma': 0.02, 'r': 0.01, 'epsilon': 0, 'alpha0': 0, 'max_alpha': 8, 'Ndt': 31, 'kappa': 9, 'theta': 0.1, 'eta': 0.1, 'v0': 0.02} ***
+*** Algorithm parameters:  {'Ntrajectories': 500, 'Mtransitions': 500, 'Nepochs': 400, 'gamma': 1, 'seed': 42, 'Nepochs_V_init': 1500, 'Nepochs_V': 300, 'lr_V': 0.0005, 'batch_V': 200, 'hidden_V': 16, 'layers_V': 4, 'Nepochs_pi': 20, 'lr_pi': 0.0005, 'batch_pi': 200, 'hidden_pi': 16, 'layers_pi': 3} ***
+*** Risk measures parameters:  {'method': 'mean'} ***
+*** Run parameters:  None ***
+*** Risk measures:  ['mean'] ***
+*** alpha_cvar:  [0.2]
+03-18 19:10:41: Training starting...
+--Estimation of V--
+ Epoch = 0,  Loss: 0.0
+ Epoch = 50,  Loss: 0.0

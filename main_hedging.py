@@ -15,7 +15,6 @@ import torch as T
 import torch.optim as optim
 # personal files
 import utils
-import hyperparams
 from models import PolicyApprox, ValueApprox
 from risk_measure import RiskMeasure
 from envs import HedgingEnv
@@ -25,23 +24,47 @@ import time
 import os
 import pdb # use with set_trace() for the debugger
 from datetime import datetime
+import argparse
+import yaml
 
 """
 Parameters
 """
 
-# running on a personal computer or a Compute Canada server
-computer = 'personal' # 'cluster' | 'personal'
-preload = False # load pre-trained model prior to the training phase
+# Create directory for storing runs
+DATE_FORMAT = '%m-%d %H:%M:%S'
+RUNS_DIR = 'runs'
+os.makedirs(RUNS_DIR, exist_ok=True)
+
+#matplotlib.use('Agg')
+device = T.device("cuda" if T.cuda.is_available() else "cpu")
+
+# Parse command line inputs
+parser = argparse.ArgumentParser(description='Train or test model.')
+parser.add_argument('hyperparameters', help='')
+parser.add_argument('--train', help='Training mode', action='store_true')
+parser.add_argument('--preload', help='Should the existing model be preloaded', action='store_true')
+args = parser.parse_args()
+
+preload= args.preload
+hyperparameters_version = args.hyperparameters
+is_training = args.train
+print('Hyperparameter set:', hyperparameters_version)
+with open('hyperparameters.yml','r') as file:
+    all_hyperparameter_sets = yaml.safe_load(file)
+    hyperparameters = all_hyperparameter_sets[hyperparameters_version]
+
+envParams = hyperparameters['envParams']
+algoParams = hyperparameters['algoParams']
+riskParams = hyperparameters['riskParams']
+runParams = hyperparameters['runParams']
+repo_name = hyperparameters_version
 
 # risk measures used
-rm_list = ['mean', 'CVaR', 'CVaR-penalized'] # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
-alpha_cvar = [-99, 0.2, 0.2] # threshold for the conditional value-at-risk
-kappa_semidev = [-99, -99, 0.2] # coefficient for the mean semideviation
-r_semidev = [-99, -99, -99] # exponent of the mean-semideviation
-
-# parameters for the model and algorithm
-repo_name, envParams, algoParams = hyperparams.initParams()
+rm_list = ['mean'] # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
+alpha_cvar = [ 0.2] # threshold for the conditional value-at-risk
+kappa_semidev = [ -99] # coefficient for the mean semideviation
+r_semidev = [-99] # exponent of the mean-semideviation
 
 print_progress = 200 # number of epochs before printing the time/loss
 plot_progress = 50 # number of epochs before plotting the policy/value function
@@ -50,28 +73,29 @@ save_progress = 100 # number of epochs before saving the policy/value function A
 """
 End of Parameters
 """
+log_message =f'*** Name of the repository:  {repo_name} ***\n'\
+            f'*** Environment parameters:  {envParams} ***\n'\
+            f'*** Algorithm parameters:  {algoParams} ***\n'\
+            f'*** Risk measures parameters:  {riskParams} ***\n'\
+            f'*** Run parameters:  {runParams} ***\n'\
+            f'*** Risk measures:  {rm_list} ***\n'\
+            f'*** alpha_cvar:  {alpha_cvar}'
 
+print(log_message)
 # print all parameters for reproducibility purposes
 print('\n*** Name of the repository: ', repo_name, ' ***\n')
-hyperparams.printParams(envParams, algoParams)
-print('*  alpha_cvar: ', alpha_cvar,
-        ' kappa_semidev: ', kappa_semidev,
-        ' r_semidev: ', r_semidev)
+
 
 # Feller condition
 assert (2*envParams["kappa"]*envParams["theta"] > envParams["eta"]**2), "Feller condition is not satisfied."
 
-# create a new directory
-if(computer == 'personal'): # personal computer
-    repo = repo_name
-    data_repo = repo_name
-if(computer == 'cluster'): # Compute Canada server
-    data_dir = os.getenv("HOME")
-    output_dir = os.getenv("SCRATCH")
-    repo = output_dir + '/' + repo_name
-    data_repo = data_dir + '/ComputeCanadaRepo/' + repo_name
-
-utils.directory(repo)
+# Create repository for storing result
+repo = os.path.join(RUNS_DIR, repo_name)
+if not os.path.exists(repo):
+    os.makedirs(repo)
+LOG_FILE = os.path.join(repo, f'{hyperparameters_version}.log')
+with open(LOG_FILE,'w') as file:
+    file.write(log_message + '\n')
 
 # loop for all risk measures
 for idx_method, method in enumerate(rm_list):
@@ -98,8 +122,8 @@ for idx_method, method in enumerate(rm_list):
         method = 'CVaR' + str(round(alpha_cvar[idx_method],3)) \
                     + '-pen' + str(round(kappa_semidev[idx_method],3))
 
-    utils.directory(repo + '/' + method)
-    utils.directory(repo + '/' + method + '/evolution')
+    #utils.directory(repo + '/' + method)
+    #utils.directory(repo + '/' + method + '/evolution')
 
     # create policy & value function objects
     # single neural network; (price x hedge x bank account x time)
@@ -119,7 +143,19 @@ for idx_method, method in enumerate(rm_list):
                                     policy=policy,
                                     V=value_function,
                                     risk_measure=risk_measure,
-                                    gamma=algoParams["gamma"])
+                                    hyperparameter_set=hyperparameters_version,
+                                    LOG_FILE=LOG_FILE)
+
+    if is_training:
+        start_time = datetime.now()
+        last_graph_update_time = start_time
+
+        log_message = f"{start_time.strftime(DATE_FORMAT)}: Training starting..."
+        print(log_message)
+
+        start_time = time.time()
+        with open(actor_critic.LOG_FILE, 'a') as file:
+            file.write(log_message + '\n')
 
     if preload:
         # load the weights of the pre-trained model
@@ -155,9 +191,11 @@ for idx_method, method in enumerate(rm_list):
 
         # print progress
         if epoch % print_progress == 0 or epoch == algoParams["Nepochs"] - 1:
-            print('*** Epoch = ', str(epoch) ,
-                    ' completed, Duration = ', "{:.3f}".format(time.time() - start_time), ' secs ***')
+            log_message= f"*** Epoch =  {str(epoch)} completed, Duration = {(time.time() - start_time): .3f} secs ***"
             start_time = time.time()
+            print(log_message)
+            with open(actor_critic.LOG_FILE, 'a') as file:
+                file.write(log_message + '\n')
 
         # plot current policy
         if epoch % plot_progress == 0 or epoch == algoParams["Nepochs"] - 1:
@@ -168,17 +206,16 @@ for idx_method, method in enumerate(rm_list):
         if epoch % save_progress == 0:
             now = datetime.now()
             # save the neural network
-            T.save(actor_critic.policy.state_dict(),
-                    repo + '/' + method + '/policy_model' + '-' + str(now.hour) + '-' + str(now.minute) + '-' + str(now.second) + '.pt')
-            T.save(actor_critic.V.state_dict(),
-                    repo + '/' + method + '/V_model' + '-' + str(now.hour) + '-' + str(now.minute) + '-' + str(now.second) + '.pt')
+            T.save(actor_critic.policy.state_dict(), actor_critic.PI_MODEL_FILE)
+            T.save(actor_critic.V.state_dict(), actor_critic.V_MODEL_FILE)
 
     # save the neural network
-    T.save(actor_critic.policy.state_dict(),
-            repo + '/' + method + '/policy_model.pt')
-    T.save(actor_critic.V.state_dict(),
-            repo + '/' + method + '/V_model.pt')
+    T.save(actor_critic.policy.state_dict(), actor_critic.PI_MODEL_FILE)
+    T.save(actor_critic.V.state_dict(), actor_critic.V_MODEL_FILE)
     # to load the model, M = ModelClass(*args, **kwargs); M.load_state_dict(T.load(PATH))
 
     # print progress
-    print('*** Training phase completed! ***')
+    log_message ='*** Training phase completed! ***'
+    print(log_message)
+    with open(actor_critic.LOG_FILE, 'a') as file:
+        file.write(log_message+'\n')

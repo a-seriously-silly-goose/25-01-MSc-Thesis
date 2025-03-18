@@ -19,7 +19,9 @@ class HedgingEnv():
         self.spaces = {'t_space' : np.arange(params["Ndt"]),
                       'S_space' : np.linspace(params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*-3),
                                               params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*3), 31),
-                      'v_space' : np.linspace(0.0, 2*params["eta"]*params["v0"], 31),
+                      'v_space' : np.linspace(params["v0"], params["v0"], 31),
+                      # for Heston
+                      # 'v_space' : np.linspace(0.0, 2*params["eta"]*params["v0"], 31),
                       'alpha_space' : np.linspace(-params["max_alpha"], params["max_alpha"], 31),
                       'B_space' : np.linspace(params["B0"]-params["S0"]*params["max_alpha"],
                                             params["B0"]+params["S0"]*params["max_alpha"], 31)}
@@ -44,10 +46,7 @@ class HedgingEnv():
             S0 = self.params["S0"] * \
                     T.exp(-1/2*self.params["theta"]*self.params["T"] + \
                         np.sqrt(self.params["theta"]*self.params["T"]) * T.randn(size=(Nsims,), device=self.device))
-            v0 = T.maximum(self.params["theta"] + \
-                            self.params["eta"] * np.sqrt(self.params["theta"]) /  \
-                            np.sqrt(2*self.params["kappa"]) * T.randn(size=(Nsims,), device=self.device),
-                            0.001*T.ones(1))
+            v0 = self.params["v0"]*T.ones(Nsims)
             alpha_m1 = -self.params["max_alpha"] + 2*self.params["max_alpha"]*T.rand(size=(Nsims,), device=self.device)
             B0 = -(self.params["S0"]*alpha_m1) + 0.75*T.randn(size=(Nsims,), device=self.device)
 
@@ -63,7 +62,8 @@ class HedgingEnv():
         # alpha_t : new amount of the stock held by the agent (action)
 
         Nsims = list(S_t.shape)
-        Nsims.append(2)
+        # add back for Heston
+        #Nsims.append(2)
         
         # time intervals
         dt = self.params["T"]/self.params["Ndt"]
@@ -71,18 +71,27 @@ class HedgingEnv():
         vp = T.maximum(v_t, T.zeros(1))
 
         # correlation matrix
-        Omega = T.Tensor([[1, self.params["rho"]], [0, np.sqrt(1-self.params["rho"]**2)]])
+        #Omega = T.Tensor([[1, self.params["rho"]], [0, np.sqrt(1-self.params["rho"]**2)]])
         
         # generate correlated brownian motions
-        W = T.einsum('...k,kl->...l', T.randn((Nsims), device=self.device), Omega)
+
+        # for Heston 
+        #W = T.einsum('...k,kl->...l', T.randn((Nsims), device=self.device), Omega)
         
         # simulate the price
-        S_tp1 = S_t * T.exp((self.params["mu"]-0.5*vp)*dt + sqrt_dt*T.sqrt(vp)*W[...,0])
+        S_tp1 = S_t * T.exp((self.params["r"] - 0.5 * self.params["sigma"]**2) * dt +\
+             self.params["sigma"] * sqrt_dt * T.randn(Nsims, device=self.device))
+
+        # for Heston
+        #S_tp1 = S_t * T.exp((self.params["mu"]-0.5*vp)*dt + sqrt_dt*T.sqrt(vp)*W[...,0])
         
         # simulate the volatility
-        v_tp1 = v_t + self.params["kappa"] * (self.params["theta"] - vp) * dt \
-                    + self.params["eta"] * sqrt_dt * T.sqrt(vp) * W[...,1] \
-                    + (v_t >= 0)*(0.25 * self.params["eta"]**2 * dt * (W[...,1]**2 - 1))
+        v_tp1 = v_t
+        
+        # for Heston
+        #v_tp1 = v_t + self.params["kappa"] * (self.params["theta"] - vp) * dt \
+        #            + self.params["eta"] * sqrt_dt * T.sqrt(vp) * W[...,1] \
+        #            + (v_t >= 0)*(0.25 * self.params["eta"]**2 * dt * (W[...,1]**2 - 1))
 
         # compute the bank account cash-flow
         B_tplus = B_t \
@@ -111,4 +120,4 @@ class HedgingEnv():
 
     # payoff of the option
     def option_price(self, S):
-        return T.maximum(S - self.params["K"], T.zeros(1))
+        return T.maximum(self.params["K"] - S, T.zeros(1))

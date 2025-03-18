@@ -15,7 +15,6 @@ import torch as T
 import torch.optim as optim
 # personal files
 import utils
-import hyperparams
 from models import PolicyApprox, ValueApprox
 from risk_measure import RiskMeasure
 from envs import HedgingEnv
@@ -24,20 +23,48 @@ from actor_critic import ActorCriticPG
 import time
 import os
 import pdb # use with set_trace() for the debugger
+import argparse
+import yaml
 
 """
 Parameters
 """
+# Parse command line inputs
+parser = argparse.ArgumentParser(description='Train or test model.')
+parser.add_argument('hyperparameters', help='')
+parser.add_argument('--train', help='Training mode', action='store_true')
+parser.add_argument('--preload', help='Should the existing model be preloaded', action='store_true')
+args = parser.parse_args()
 
-# running on a personal computer or a Compute Canada server
-computer = 'personal' # 'cluster' | 'personal'
+preload= args.preload
+hyperparameters_version = args.hyperparameters
+is_training = args.train
+print('Hyperparameter set:', hyperparameters_version)
+with open('hyperparameters.yml','r') as file:
+    all_hyperparameter_sets = yaml.safe_load(file)
+    hyperparameters = all_hyperparameter_sets[hyperparameters_version]
+
+envParams = hyperparameters['envParams']
+algoParams = hyperparameters['algoParams']
+riskParams = hyperparameters['riskParams']
+runParams = hyperparameters['runParams']
+repo_name = hyperparameters_version
 
 # risk measures used
+rm_list = ['CVaR'] # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
+alpha_cvar = [ 0.2] # threshold for the conditional value-at-risk
+kappa_semidev = [ -99] # coefficient for the mean semideviation
+r_semidev = [-99] # exponent of the mean-semideviation
+
+
+print_progress = 200 # number of epochs before printing the time/loss
+plot_progress = 50 # number of epochs before plotting the policy/value function
+save_progress = 100 # number of epochs before saving the policy/value function ANNs
+# risk measures used
 # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
-rm_list = ['mean', 'CVaR0.2', 'CVaR0.2-pen0.2']
+rm_list = ['mean']
 
 # parameters for the model and algorithm
-repo_name, envParams, algoParams = hyperparams.initParams()
 
 seed = 4321 # set seed for replication purposes
 
@@ -53,16 +80,30 @@ End of Parameters
 """
 
 # print all parameters for reproducibility purposes
-print('\n*** Name of the repository: ', repo_name, ' ***\n')
-hyperparams.printParams(envParams, algoParams)
+log_message =f'*** Name of the repository:  {repo_name} ***\n'\
+            f'*** Environment parameters:  {envParams} ***\n'\
+            f'*** Algorithm parameters:  {algoParams} ***\n'\
+            f'*** Risk measures parameters:  {riskParams} ***\n'\
+            f'*** Run parameters:  {runParams} ***\n'\
+            f'*** Risk measures:  {rm_list} ***\n'\
+            f'*** alpha_cvar:  {alpha_cvar}'
 
-# create a new directory
-if(computer == 'personal'): # personal computer
-    repo = repo_name
-if(computer == 'cluster'): # Compute Canada server
-    data_dir = os.getenv("HOME")
-    output_dir = os.getenv("SCRATCH")
-    repo = output_dir + '/' + repo_name
+print(log_message)
+
+
+algoParams["lr_pi"] = float(algoParams["lr_pi"])
+algoParams["lr_V"] = float(algoParams["lr_V"])
+
+# Check if preloading is required
+#preload = runParams.get("preload", False)
+#data_repo = runParams.get("data_repo", "")
+
+# Create repository for storing result
+repo = os.path.join('runs', repo_name)
+if not os.path.exists(repo):
+    os.makedirs(repo)
+LOG_FILE = os.path.join(repo, f'{hyperparameters_version}_plot.log')
+
 
 utils.directory(repo)
 
@@ -96,11 +137,16 @@ for idx_method, method in enumerate(rm_list):
                                     policy=policy,
                                     V=value_function,
                                     risk_measure=risk_measure,
-                                    gamma=algoParams["gamma"])
+                                    hyperparameter_set=hyperparameters_version,
+                                    LOG_FILE= LOG_FILE,)
 
     # load the trained model
-    actor_critic.policy.load_state_dict(T.load(repo + '/' + method + '/policy_model.pt'))
-    actor_critic.V.load_state_dict(T.load(repo + '/' + method + '/V_model.pt'))
+    actor_critic.policy.load_state_dict(T.load(repo + '/Pi '+ hyperparameters_version+'.pt',map_location=T.device('cpu'), weights_only=True))
+    actor_critic.V.load_state_dict(T.load(repo + '/V '+ hyperparameters_version+'.pt',map_location=T.device('cpu'), weights_only=True))
+    
+    #print poplicies and value functions
+    actor_critic.plot_current_V()
+    actor_critic.plot_current_policy()
 
     # print progress
     print('*** Training phase completed! ***')
@@ -217,7 +263,7 @@ plt.clf()
 ### PLOT - Payoff at the terminal time
 for idx_method, method in enumerate(rm_list):
     plt.scatter(finalprice[:,idx_method],
-                rewards_total[:,idx_method] + np.maximum(finalprice[:,idx_method] - env.params["K"], 0),
+                rewards_total[:,idx_method] + np.maximum( env.params["K"]+ finalprice[:,idx_method], 0),
                 alpha=0.15,
                 s=2,
                 color=utils.mred)    
@@ -226,6 +272,16 @@ for idx_method, method in enumerate(rm_list):
     plt.ylabel("Bank account")
     plt.tight_layout()
     plt.savefig(repo + '/payoff_' + method + '.pdf', transparent=True)
+    plt.clf()
+
+### PLOT - Quadratic Hedging Error
+for idx_method, method in enumerate(rm_list):
+    plt.hist((-rewards_total[:,idx_method] + np.maximum( env.params["K"]-finalprice[:,idx_method] , 0))**2,
+                alpha=0.15,
+                color=utils.mred)    
+    plt.title('Quadratic Hedging Error')
+    plt.tight_layout()
+    plt.savefig(repo + '/QHE_' + method + '.pdf', transparent=True)
     plt.clf()
 
 # print progress

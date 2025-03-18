@@ -14,9 +14,13 @@ import torch as T
 import torch.optim as optim
 from torch.distributions import Normal
 # misc
-from . import utils
-from datetime import datetime
+import utils
+from datetime import datetime, timedelta
 import pdb # use with set_trace() for the debugger
+import yaml 
+import argparse
+import os
+import utils
 
 class ActorCriticPG():
     # constructor
@@ -27,9 +31,14 @@ class ActorCriticPG():
                     policy, # ANN structure for the policy
                     V, # ANN structure for the value function
                     risk_measure, # risk measure
-                    gamma=1): # discount factor
+                    hyperparameter_set, # the version on the hyperparameters
+                    LOG_FILE): # discount factor
 
-        assert (gamma > 0) and (gamma <= 1), "gamma needs to be in (0,1]"
+        
+
+        with open('hyperparameters.yml','r') as file:
+            all_hyperparameter_sets = yaml.safe_load(file)
+            hyperparameters = all_hyperparameter_sets[hyperparameter_set]
 
         # assign objects to the actor_critic instance
         self.policy = policy # policy (ACTOR)
@@ -38,14 +47,23 @@ class ActorCriticPG():
         self.repo = repo # repository for files
         self.method = method # sub folder for files
         self.risk_measure = risk_measure # risk measure
-        self.gamma = gamma # discount factor
+        #self.gamma = gamma # discount factor
         self.device = self.policy.device # PyTorch device
+        #assert (gamma > 0) and (gamma <= 1), "gamma needs to be in (0,1]"
         
         # initialize loss objects
         self.loss_history_policy = [] # keep track of all losses for the policy
         self.loss_history_V = [] # keep track of all losses for the V
         self.loss_trail = 100 # number of epochs for the loss moving average
         self.loss_print = 50 # number of epochs before printing the loss
+
+        self.LOG_FILE = LOG_FILE
+        self.V_MODEL_FILE = os.path.join(self.repo, f'V {hyperparameter_set}.pt')
+        self.PI_MODEL_FILE = os.path.join(self.repo, f'Pi {hyperparameter_set}.pt')
+        self.GRAPH_FILE1 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT1.png')
+        self.GRAPH_FILE2 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT2.png')
+        self.GRAPH_FILE3 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT3.png')
+        self.GRAPH_FILE4 = os.path.join(self.repo, f'{hyperparameter_set}_PLOT4.png')
 
 
     # select an action according to the policy ('best' or 'random')
@@ -196,7 +214,11 @@ class ActorCriticPG():
                     Nepochs=100, # number of epochs
                     rng_seed=None): # random seed
         # print progress
-        print('--Estimation of V--')
+        log_message = '--Estimation of V--'
+        print(log_message)
+        with open(self.LOG_FILE, 'a') as file:
+            file.write(log_message+'\n')
+            
         batch_size = np.minimum(batch_size, Ntrajectories)
 
         # set V in training mode
@@ -253,10 +275,13 @@ class ActorCriticPG():
         
             # print progress
             if epoch % self.loss_print == 0 or epoch == Nepochs - 1:
-                print('   Epoch = ',
-                        str(epoch),
-                        ', Loss: ',
-                        str(np.round( np.mean(self.loss_history_V[-self.loss_trail:]) ,3)))
+                mean_loss = np.round( np.mean(self.loss_history_V[-self.loss_trail:]))
+
+                log_message= f" Epoch = {str(epoch)}, " \
+                             f" Loss: {str(mean_loss)}"
+                print(log_message)
+                with open(self.LOG_FILE, 'a') as file:
+                    file.write(log_message+'\n')
         
         # set V in evaluation mode
         self.V.eval()
@@ -270,7 +295,10 @@ class ActorCriticPG():
                         Nepochs=100, # number of epochs
                         rng_seed=None): # random seed
         # print progress
-        print('--Update of pi--')
+        log_message = '--Update of pi--'
+        print(log_message)
+        with open(self.LOG_FILE, 'a') as file:
+            file.write(log_message+'\n')
         batch_size = np.minimum(batch_size, Ntrajectories)
         
         # set the policy in training mode
@@ -311,10 +339,12 @@ class ActorCriticPG():
 
             # print progress
             if epoch % self.loss_print == 0 or epoch == Nepochs - 1:
-                print('   Epoch = ',
-                      str(epoch) ,
-                      ', Loss: ',
-                      str(np.round( np.mean(self.loss_history_policy[-self.loss_trail:]) ,3)))
+                mean_loss = np.round( np.mean(self.loss_history_V[-self.loss_trail:]))
+                log_message = f'   Epoch =  {str(epoch)} , '\
+                              f' Loss: {mean_loss}'
+                print(log_message)
+                with open(self.LOG_FILE, 'a') as file:
+                    file.write(log_message+'\n')
 
         # set the policy in evaluation mode
         self.policy.eval()
@@ -356,10 +386,7 @@ class ActorCriticPG():
         plt.colorbar()
         plt.tight_layout()
         now = datetime.now()
-        plt.savefig(self.repo + '/' + self.method +
-                    '/evolution/best_actions' + 
-                    '-' + str(now.hour) + '-' + str(now.minute) + '-' + str(now.second) +
-                    '.png', transparent=True)
+        plt.savefig(self.GRAPH_FILE1, transparent=True)
         plt.clf()
 
 
@@ -392,8 +419,5 @@ class ActorCriticPG():
         plt.colorbar()
         plt.tight_layout()
         now = datetime.now()
-        plt.savefig(self.repo + '/' + self.method +
-                    '/evolution/V_function' + 
-                    '-' + str(now.hour) + '-' + str(now.minute) + '-' + str(now.second) +
-                    '.png', transparent=True)
+        plt.savefig(self.GRAPH_FILE2, transparent=True)
         plt.clf()
