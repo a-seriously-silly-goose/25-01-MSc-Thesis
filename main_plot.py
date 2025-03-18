@@ -273,5 +273,16 @@ for idx_method, method in enumerate(rm_list):
     plt.savefig(repo + '/payoff_' + method + '.pdf', transparent=True)
     plt.clf()
 
+
+### PLOT - Payoff at the terminal time
+for idx_method, method in enumerate(rm_list):
+    plt.hist((-rewards_total[:,idx_method] + np.maximum( env.params["K"]-finalprice[:,idx_method] , 0))**2,
+                alpha=0.15,
+                color=utils.mred)    
+    plt.title('Quadratic Hedging Error')
+    plt.tight_layout()
+    plt.savefig(repo + '/QHE_' + method + '.pdf', transparent=True)
+    plt.clf()
+
 # print progress
 print('*** Testing phase completed! ***')
