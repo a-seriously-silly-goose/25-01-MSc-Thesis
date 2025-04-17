@@ -1,5 +1,96 @@
 
 # version - itteration - run
+
+# try more extreme params
+v002.000.002:
+  envParams:
+    S0: 30 # initial stock price
+    B0: 0 # initial bank account
+    K: 30 # strike price 
+    T: .08333333 # time to maturity
+    mu: 0.1 # drift in GBM
+    sigma: .2 # volatility in GBM
+    r: 0.01 # risk-free rate
+    epsilon: 0 # transaction cost
+    alpha0: 0 # initial position
+    max_alpha: 8 # maximum position
+    Ndt: 31 # number of time steps
+    kappa: 9
+    theta: 0.1
+    eta: 0.1
+    v0: 0.04 # initial variance
+  
+  algoParams:
+   # note: the next two must match!
+    Ntrajectories : 500 # number of generated trajectories
+    Mtransitions : 500 # number of additional transitions for each state
+    Nepochs : 400 # number of epochs of the whole algorithm
+    gamma : 1 # discount factor
+    seed : 42 # (int or None) set seed for replication purposes
+
+    Nepochs_V_init : 1500 # number of epochs for the estimation of V during the first epoch
+    Nepochs_V : 300 # number of epochs for the estimation of V
+    lr_V : .0005 # learning rate of the neural net associated with V
+    batch_V : 200 # number of trajectories for each mini-batch in estimating V
+    hidden_V : 16 # number of hidden nodes in the neural net associated with V
+    layers_V : 4 # number of layers in the neural net associated with V
+    
+    Nepochs_pi : 20 # number of epoch for the update of pi
+    lr_pi : .0005 # learning rate of the neural net associated with pi
+    batch_pi : 200 # number of trajectories for each mini-batch when updating pi
+    hidden_pi : 16 # number of hidden nodes in the neural net associated with pi
+    layers_pi : 3 # number of layers in the neural net associated with pi
+    
+  riskParams:
+    method: 'mean'
+  
+  runParams:
+# run on laptop
+# volatility was too low
+v002.000.002:
+  envParams:
+    S0: 30 # initial stock price
+    B0: 0 # initial bank account
+    K: 30 # strike price 
+    T: .08333333 # time to maturity
+    mu: 0.1 # drift in GBM
+    sigma: .2 # volatility in GBM
+    r: 0.01 # risk-free rate
+    epsilon: 0 # transaction cost
+    alpha0: 0 # initial position
+    max_alpha: 8 # maximum position
+    Ndt: 31 # number of time steps
+    kappa: 9
+    theta: 0.1
+    eta: 0.1
+    v0: 0.04 # initial variance
+  
+  algoParams:
+   # note: the next two must match!
+    Ntrajectories : 500 # number of generated trajectories
+    Mtransitions : 500 # number of additional transitions for each state
+    Nepochs : 400 # number of epochs of the whole algorithm
+    gamma : 1 # discount factor
+    seed : 42 # (int or None) set seed for replication purposes
+
+    Nepochs_V_init : 1500 # number of epochs for the estimation of V during the first epoch
+    Nepochs_V : 300 # number of epochs for the estimation of V
+    lr_V : .0005 # learning rate of the neural net associated with V
+    batch_V : 200 # number of trajectories for each mini-batch in estimating V
+    hidden_V : 16 # number of hidden nodes in the neural net associated with V
+    layers_V : 4 # number of layers in the neural net associated with V
+    
+    Nepochs_pi : 20 # number of epoch for the update of pi
+    lr_pi : .0005 # learning rate of the neural net associated with pi
+    batch_pi : 200 # number of trajectories for each mini-batch when updating pi
+    hidden_pi : 16 # number of hidden nodes in the neural net associated with pi
+    layers_pi : 3 # number of layers in the neural net associated with pi
+    
+  riskParams:
+    method: 'mean'
+  
+  runParams:
+
 # run on laptop
 # aim to replicate CJ21 as closely as possible
 v002.000.001:

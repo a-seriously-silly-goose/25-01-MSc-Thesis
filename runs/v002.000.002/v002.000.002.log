@@ -1,0 +1,506 @@
+*** Name of the repository:  v002.000.002 ***
+*** Environment parameters:  {'S0': 30, 'B0': 0, 'K': 30, 'T': 0.08333333, 'mu': 0.1, 'sigma': 0.2, 'r': 0.01, 'epsilon': 0, 'alpha0': 0, 'max_alpha': 8, 'Ndt': 31, 'kappa': 9, 'theta': 0.1, 'eta': 0.1, 'v0': 0.04} ***
+*** Algorithm parameters:  {'Ntrajectories': 500, 'Mtransitions': 500, 'Nepochs': 400, 'gamma': 1, 'seed': 42, 'Nepochs_V_init': 1500, 'Nepochs_V': 300, 'lr_V': 0.0005, 'batch_V': 200, 'hidden_V': 16, 'layers_V': 4, 'Nepochs_pi': 20, 'lr_pi': 0.0005, 'batch_pi': 200, 'hidden_pi': 16, 'layers_pi': 3} ***
+*** Risk measures parameters:  {'method': 'mean'} ***
+*** Run parameters:  None ***
+*** Risk measures:  ['mean'] ***
+*** alpha_cvar:  [0.2]
+03-19 22:01:14: Training starting...
+--Estimation of V--
+ Epoch = 0,  Loss: 1.1223
+ Epoch = 50,  Loss: 1.2956
+ Epoch = 100,  Loss: 1.304
+ Epoch = 150,  Loss: 1.2964
+ Epoch = 200,  Loss: 1.3102
+ Epoch = 250,  Loss: 1.3146
+ Epoch = 300,  Loss: 1.2934
+ Epoch = 350,  Loss: 1.2886
+ Epoch = 400,  Loss: 1.2752
+ Epoch = 450,  Loss: 1.2826
+ Epoch = 500,  Loss: 1.2725
+ Epoch = 550,  Loss: 1.254
+ Epoch = 600,  Loss: 1.2966
+ Epoch = 650,  Loss: 1.3334
+ Epoch = 700,  Loss: 1.3258
+ Epoch = 750,  Loss: 1.296
+ Epoch = 800,  Loss: 1.2814
+ Epoch = 850,  Loss: 1.3253
+ Epoch = 900,  Loss: 1.3278
+ Epoch = 950,  Loss: 1.3122
+ Epoch = 1000,  Loss: 1.3335
+ Epoch = 1050,  Loss: 1.3066
+ Epoch = 1100,  Loss: 1.3077
+ Epoch = 1150,  Loss: 1.3351
+ Epoch = 1200,  Loss: 1.3322
+ Epoch = 1250,  Loss: 1.3089
+ Epoch = 1300,  Loss: 1.2857
+ Epoch = 1350,  Loss: 1.2975
+ Epoch = 1400,  Loss: 1.3066
+ Epoch = 1450,  Loss: 1.317
+ Epoch = 1499,  Loss: 1.3242
+--Estimation of V--
+ Epoch = 0,  Loss: 1.3262
+ Epoch = 50,  Loss: 1.3293
+ Epoch = 100,  Loss: 1.3241
+ Epoch = 150,  Loss: 1.2972
+ Epoch = 200,  Loss: 1.3011
+ Epoch = 250,  Loss: 1.2972
+ Epoch = 299,  Loss: 1.2671
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.2670999765396118
+   Epoch =  19 ,  Loss: 1.2670999765396118
+*** Epoch =  0 completed, Duration =  748.093 secs ***
+--Estimation of V--
+ Epoch = 0,  Loss: 1.2718
+ Epoch = 50,  Loss: 1.499
+ Epoch = 100,  Loss: 1.7215
+ Epoch = 150,  Loss: 1.693
+ Epoch = 200,  Loss: 1.6909
+ Epoch = 250,  Loss: 1.6935
+ Epoch = 299,  Loss: 1.6656
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.6655999422073364
+   Epoch =  19 ,  Loss: 1.6655999422073364
+--Estimation of V--
+ Epoch = 0,  Loss: 1.6685
+ Epoch = 50,  Loss: 1.7502
+ Epoch = 100,  Loss: 1.8331
+ Epoch = 150,  Loss: 1.8045
+ Epoch = 200,  Loss: 1.8021
+ Epoch = 250,  Loss: 1.8051
+ Epoch = 299,  Loss: 1.7812
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.7812000513076782
+   Epoch =  19 ,  Loss: 1.7812000513076782
+--Estimation of V--
+ Epoch = 0,  Loss: 1.7844
+ Epoch = 50,  Loss: 1.8427
+ Epoch = 100,  Loss: 1.9034
+ Epoch = 150,  Loss: 1.8835
+ Epoch = 200,  Loss: 1.8794
+ Epoch = 250,  Loss: 1.8752
+ Epoch = 299,  Loss: 1.8429
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.842900037765503
+   Epoch =  19 ,  Loss: 1.842900037765503
+--Estimation of V--
+ Epoch = 0,  Loss: 1.8445
+ Epoch = 50,  Loss: 1.8893
+ Epoch = 100,  Loss: 1.9374
+ Epoch = 150,  Loss: 1.9073
+ Epoch = 200,  Loss: 1.9064
+ Epoch = 250,  Loss: 1.9088
+ Epoch = 299,  Loss: 1.884
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.8839999437332153
+   Epoch =  19 ,  Loss: 1.8839999437332153
+--Estimation of V--
+ Epoch = 0,  Loss: 1.8867
+ Epoch = 50,  Loss: 1.9194
+ Epoch = 100,  Loss: 1.9471
+ Epoch = 150,  Loss: 1.9186
+ Epoch = 200,  Loss: 1.9261
+ Epoch = 250,  Loss: 1.9293
+ Epoch = 299,  Loss: 1.8926
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.8926000595092773
+   Epoch =  19 ,  Loss: 1.8926000595092773
+--Estimation of V--
+ Epoch = 0,  Loss: 1.8946
+ Epoch = 50,  Loss: 1.9243
+ Epoch = 100,  Loss: 1.9515
+ Epoch = 150,  Loss: 1.92
+ Epoch = 200,  Loss: 1.9245
+ Epoch = 250,  Loss: 1.9274
+ Epoch = 299,  Loss: 1.8974
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.8974000215530396
+   Epoch =  19 ,  Loss: 1.8974000215530396
+--Estimation of V--
+ Epoch = 0,  Loss: 1.8998
+ Epoch = 50,  Loss: 1.9273
+ Epoch = 100,  Loss: 1.9519
+ Epoch = 150,  Loss: 1.9251
+ Epoch = 200,  Loss: 1.9324
+ Epoch = 250,  Loss: 1.9301
+ Epoch = 299,  Loss: 1.9
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.899999976158142
+   Epoch =  19 ,  Loss: 1.899999976158142
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9027
+ Epoch = 50,  Loss: 1.9369
+ Epoch = 100,  Loss: 1.9626
+ Epoch = 150,  Loss: 1.9348
+ Epoch = 200,  Loss: 1.9349
+ Epoch = 250,  Loss: 1.9274
+ Epoch = 299,  Loss: 1.8961
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.8961000442504883
+   Epoch =  19 ,  Loss: 1.8961000442504883
+--Estimation of V--
+ Epoch = 0,  Loss: 1.8986
+ Epoch = 50,  Loss: 1.9356
+ Epoch = 100,  Loss: 1.9625
+ Epoch = 150,  Loss: 1.9327
+ Epoch = 200,  Loss: 1.9337
+ Epoch = 250,  Loss: 1.9321
+ Epoch = 299,  Loss: 1.9031
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9031000137329102
+   Epoch =  19 ,  Loss: 1.9031000137329102
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9055
+ Epoch = 50,  Loss: 1.9389
+ Epoch = 100,  Loss: 1.9666
+ Epoch = 150,  Loss: 1.9401
+ Epoch = 200,  Loss: 1.9374
+ Epoch = 250,  Loss: 1.9362
+ Epoch = 299,  Loss: 1.9074
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9074000120162964
+   Epoch =  19 ,  Loss: 1.9074000120162964
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9086
+ Epoch = 50,  Loss: 1.9308
+ Epoch = 100,  Loss: 1.9628
+ Epoch = 150,  Loss: 1.9386
+ Epoch = 200,  Loss: 1.9347
+ Epoch = 250,  Loss: 1.9325
+ Epoch = 299,  Loss: 1.9046
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9046000242233276
+   Epoch =  19 ,  Loss: 1.9046000242233276
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9059
+ Epoch = 50,  Loss: 1.9326
+ Epoch = 100,  Loss: 1.9639
+ Epoch = 150,  Loss: 1.94
+ Epoch = 200,  Loss: 1.936
+ Epoch = 250,  Loss: 1.9321
+ Epoch = 299,  Loss: 1.9053
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9053000211715698
+   Epoch =  19 ,  Loss: 1.9053000211715698
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9067
+ Epoch = 50,  Loss: 1.9378
+ Epoch = 100,  Loss: 1.9701
+ Epoch = 150,  Loss: 1.9426
+ Epoch = 200,  Loss: 1.9383
+ Epoch = 250,  Loss: 1.9401
+ Epoch = 299,  Loss: 1.9144
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9143999814987183
+   Epoch =  19 ,  Loss: 1.9143999814987183
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9155
+ Epoch = 50,  Loss: 1.9449
+ Epoch = 100,  Loss: 1.9757
+ Epoch = 150,  Loss: 1.9432
+ Epoch = 200,  Loss: 1.9387
+ Epoch = 250,  Loss: 1.9387
+ Epoch = 299,  Loss: 1.9135
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9134999513626099
+   Epoch =  19 ,  Loss: 1.9134999513626099
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9147
+ Epoch = 50,  Loss: 1.9475
+ Epoch = 100,  Loss: 1.9785
+ Epoch = 150,  Loss: 1.9486
+ Epoch = 200,  Loss: 1.9456
+ Epoch = 250,  Loss: 1.9436
+ Epoch = 299,  Loss: 1.9179
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9178999662399292
+   Epoch =  19 ,  Loss: 1.9178999662399292
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9192
+ Epoch = 50,  Loss: 1.9545
+ Epoch = 100,  Loss: 1.9837
+ Epoch = 150,  Loss: 1.9519
+ Epoch = 200,  Loss: 1.9453
+ Epoch = 250,  Loss: 1.9478
+ Epoch = 299,  Loss: 1.9251
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9250999689102173
+   Epoch =  19 ,  Loss: 1.9250999689102173
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9261
+ Epoch = 50,  Loss: 1.9551
+ Epoch = 100,  Loss: 1.981
+ Epoch = 150,  Loss: 1.9533
+ Epoch = 200,  Loss: 1.9443
+ Epoch = 250,  Loss: 1.9389
+ Epoch = 299,  Loss: 1.9204
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9204000234603882
+   Epoch =  19 ,  Loss: 1.9204000234603882
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9217
+ Epoch = 50,  Loss: 1.9546
+ Epoch = 100,  Loss: 1.9838
+ Epoch = 150,  Loss: 1.9537
+ Epoch = 200,  Loss: 1.9467
+ Epoch = 250,  Loss: 1.9429
+ Epoch = 299,  Loss: 1.9219
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9219000339508057
+   Epoch =  19 ,  Loss: 1.9219000339508057
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9233
+ Epoch = 50,  Loss: 1.9598
+ Epoch = 100,  Loss: 1.9862
+ Epoch = 150,  Loss: 1.9579
+ Epoch = 200,  Loss: 1.9482
+ Epoch = 250,  Loss: 1.9416
+ Epoch = 299,  Loss: 1.9237
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.923699975013733
+   Epoch =  19 ,  Loss: 1.923699975013733
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9251
+ Epoch = 50,  Loss: 1.9611
+ Epoch = 100,  Loss: 1.9904
+ Epoch = 150,  Loss: 1.9573
+ Epoch = 200,  Loss: 1.9497
+ Epoch = 250,  Loss: 1.9476
+ Epoch = 299,  Loss: 1.9263
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.926300048828125
+   Epoch =  19 ,  Loss: 1.926300048828125
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9276
+ Epoch = 50,  Loss: 1.9605
+ Epoch = 100,  Loss: 1.9887
+ Epoch = 150,  Loss: 1.9601
+ Epoch = 200,  Loss: 1.9491
+ Epoch = 250,  Loss: 1.9472
+ Epoch = 299,  Loss: 1.9302
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9301999807357788
+   Epoch =  19 ,  Loss: 1.9301999807357788
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9316
+ Epoch = 50,  Loss: 1.964
+ Epoch = 100,  Loss: 1.9922
+ Epoch = 150,  Loss: 1.9668
+ Epoch = 200,  Loss: 1.9582
+ Epoch = 250,  Loss: 1.9541
+ Epoch = 299,  Loss: 1.937
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.937000036239624
+   Epoch =  19 ,  Loss: 1.937000036239624
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9383
+ Epoch = 50,  Loss: 1.9718
+ Epoch = 100,  Loss: 1.9991
+ Epoch = 150,  Loss: 1.9718
+ Epoch = 200,  Loss: 1.9654
+ Epoch = 250,  Loss: 1.9628
+ Epoch = 299,  Loss: 1.9449
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9449000358581543
+   Epoch =  19 ,  Loss: 1.9449000358581543
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9462
+ Epoch = 50,  Loss: 1.9738
+ Epoch = 100,  Loss: 1.9949
+ Epoch = 150,  Loss: 1.9711
+ Epoch = 200,  Loss: 1.9652
+ Epoch = 250,  Loss: 1.9604
+ Epoch = 299,  Loss: 1.9419
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9419000148773193
+   Epoch =  19 ,  Loss: 1.9419000148773193
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9434
+ Epoch = 50,  Loss: 1.9744
+ Epoch = 100,  Loss: 2.0016
+ Epoch = 150,  Loss: 1.9774
+ Epoch = 200,  Loss: 1.9698
+ Epoch = 250,  Loss: 1.9659
+ Epoch = 299,  Loss: 1.9478
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9478000402450562
+   Epoch =  19 ,  Loss: 1.9478000402450562
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9493
+ Epoch = 50,  Loss: 1.9786
+ Epoch = 100,  Loss: 2.004
+ Epoch = 150,  Loss: 1.981
+ Epoch = 200,  Loss: 1.9739
+ Epoch = 250,  Loss: 1.97
+ Epoch = 299,  Loss: 1.9506
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.950600028038025
+   Epoch =  19 ,  Loss: 1.950600028038025
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9522
+ Epoch = 50,  Loss: 1.9807
+ Epoch = 100,  Loss: 2.0087
+ Epoch = 150,  Loss: 1.9869
+ Epoch = 200,  Loss: 1.9791
+ Epoch = 250,  Loss: 1.9752
+ Epoch = 299,  Loss: 1.9559
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.955899953842163
+   Epoch =  19 ,  Loss: 1.955899953842163
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9575
+ Epoch = 50,  Loss: 1.9826
+ Epoch = 100,  Loss: 2.0093
+ Epoch = 150,  Loss: 1.9905
+ Epoch = 200,  Loss: 1.9837
+ Epoch = 250,  Loss: 1.9792
+ Epoch = 299,  Loss: 1.9593
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9593000411987305
+   Epoch =  19 ,  Loss: 1.9593000411987305
+--Estimation of V--
+ Epoch = 0,  Loss: 1.961
+ Epoch = 50,  Loss: 1.9872
+ Epoch = 100,  Loss: 2.0152
+ Epoch = 150,  Loss: 1.9971
+ Epoch = 200,  Loss: 1.9912
+ Epoch = 250,  Loss: 1.9862
+ Epoch = 299,  Loss: 1.9656
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9656000137329102
+   Epoch =  19 ,  Loss: 1.9656000137329102
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9674
+ Epoch = 50,  Loss: 1.9943
+ Epoch = 100,  Loss: 2.0256
+ Epoch = 150,  Loss: 2.0095
+ Epoch = 200,  Loss: 2.003
+ Epoch = 250,  Loss: 1.9976
+ Epoch = 299,  Loss: 1.9754
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9753999710083008
+   Epoch =  19 ,  Loss: 1.9753999710083008
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9771
+ Epoch = 50,  Loss: 1.9985
+ Epoch = 100,  Loss: 2.0222
+ Epoch = 150,  Loss: 2.0057
+ Epoch = 200,  Loss: 2.001
+ Epoch = 250,  Loss: 1.9956
+ Epoch = 299,  Loss: 1.9746
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9745999574661255
+   Epoch =  19 ,  Loss: 1.9745999574661255
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9763
+ Epoch = 50,  Loss: 1.9971
+ Epoch = 100,  Loss: 2.023
+ Epoch = 150,  Loss: 2.0082
+ Epoch = 200,  Loss: 2.0021
+ Epoch = 250,  Loss: 1.9964
+ Epoch = 299,  Loss: 1.975
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.975000023841858
+   Epoch =  19 ,  Loss: 1.975000023841858
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9767
+ Epoch = 50,  Loss: 1.9963
+ Epoch = 100,  Loss: 2.0205
+ Epoch = 150,  Loss: 2.0069
+ Epoch = 200,  Loss: 2.0016
+ Epoch = 250,  Loss: 1.9957
+ Epoch = 299,  Loss: 1.974
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9739999771118164
+   Epoch =  19 ,  Loss: 1.9739999771118164
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9758
+ Epoch = 50,  Loss: 1.9938
+ Epoch = 100,  Loss: 2.0181
+ Epoch = 150,  Loss: 2.0056
+ Epoch = 200,  Loss: 2.0005
+ Epoch = 250,  Loss: 1.9938
+ Epoch = 299,  Loss: 1.973
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9730000495910645
+   Epoch =  19 ,  Loss: 1.9730000495910645
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9748
+ Epoch = 50,  Loss: 1.9938
+ Epoch = 100,  Loss: 2.0192
+ Epoch = 150,  Loss: 2.0069
+ Epoch = 200,  Loss: 2.0015
+ Epoch = 250,  Loss: 1.9945
+ Epoch = 299,  Loss: 1.9742
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9742000102996826
+   Epoch =  19 ,  Loss: 1.9742000102996826
+--Estimation of V--
+ Epoch = 0,  Loss: 1.976
+ Epoch = 50,  Loss: 1.9931
+ Epoch = 100,  Loss: 2.0159
+ Epoch = 150,  Loss: 2.0063
+ Epoch = 200,  Loss: 2.0041
+ Epoch = 250,  Loss: 1.9963
+ Epoch = 299,  Loss: 1.9728
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9728000164031982
+   Epoch =  19 ,  Loss: 1.9728000164031982
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9745
+ Epoch = 50,  Loss: 1.9935
+ Epoch = 100,  Loss: 2.0139
+ Epoch = 150,  Loss: 2.0019
+ Epoch = 200,  Loss: 1.9998
+ Epoch = 250,  Loss: 1.9911
+ Epoch = 299,  Loss: 1.9709
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.970900058746338
+   Epoch =  19 ,  Loss: 1.970900058746338
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9727
+ Epoch = 50,  Loss: 1.9928
+ Epoch = 100,  Loss: 2.0152
+ Epoch = 150,  Loss: 2.0038
+ Epoch = 200,  Loss: 2.0027
+ Epoch = 250,  Loss: 1.9924
+ Epoch = 299,  Loss: 1.9696
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.969599962234497
+   Epoch =  19 ,  Loss: 1.969599962234497
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9715
+ Epoch = 50,  Loss: 1.9919
+ Epoch = 100,  Loss: 2.0115
+ Epoch = 150,  Loss: 2.0021
+ Epoch = 200,  Loss: 2.0014
+ Epoch = 250,  Loss: 1.9909
+ Epoch = 299,  Loss: 1.9698
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9697999954223633
+   Epoch =  19 ,  Loss: 1.9697999954223633
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9717
+ Epoch = 50,  Loss: 1.9911
+ Epoch = 100,  Loss: 2.0095
+ Epoch = 150,  Loss: 1.9992
+ Epoch = 200,  Loss: 1.9991
+ Epoch = 250,  Loss: 1.9895
+ Epoch = 299,  Loss: 1.9685
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.968500018119812
+   Epoch =  19 ,  Loss: 1.968500018119812
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9704
+ Epoch = 50,  Loss: 1.9898
+ Epoch = 100,  Loss: 2.0091
+ Epoch = 150,  Loss: 1.9989
+ Epoch = 200,  Loss: 1.9999
+ Epoch = 250,  Loss: 1.9893
+ Epoch = 299,  Loss: 1.9668
+--Update of pi--
+   Epoch =  0 ,  Loss: 1.9667999744415283
+   Epoch =  19 ,  Loss: 1.9667999744415283
+--Estimation of V--
+ Epoch = 0,  Loss: 1.9685
+ Epoch = 50,  Loss: 1.9891

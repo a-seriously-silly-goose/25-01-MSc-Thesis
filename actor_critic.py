@@ -275,7 +275,7 @@ class ActorCriticPG():
         
             # print progress
             if epoch % self.loss_print == 0 or epoch == Nepochs - 1:
-                mean_loss = np.round( np.mean(self.loss_history_V[-self.loss_trail:]))
+                mean_loss = np.round( np.mean(self.loss_history_V[-self.loss_trail:]),4)
 
                 log_message= f" Epoch = {str(epoch)}, " \
                              f" Loss: {str(mean_loss)}"
@@ -339,7 +339,7 @@ class ActorCriticPG():
 
             # print progress
             if epoch % self.loss_print == 0 or epoch == Nepochs - 1:
-                mean_loss = np.round( np.mean(self.loss_history_V[-self.loss_trail:]))
+                mean_loss = np.round( np.mean(self.loss_history_V[-self.loss_trail:]),4)
                 log_message = f'   Epoch =  {str(epoch)} , '\
                               f' Loss: {mean_loss}'
                 print(log_message)

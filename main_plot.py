@@ -51,7 +51,7 @@ runParams = hyperparameters['runParams']
 repo_name = hyperparameters_version
 
 # risk measures used
-rm_list = ['CVaR'] # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
+rm_list = ['mean'] # 'mean' | 'CVaR' | 'semi-dev' | 'CVaR-penalized' | 'mean-CVaR'
 alpha_cvar = [ 0.2] # threshold for the conditional value-at-risk
 kappa_semidev = [ -99] # coefficient for the mean semideviation
 r_semidev = [-99] # exponent of the mean-semideviation
@@ -263,7 +263,7 @@ plt.clf()
 ### PLOT - Payoff at the terminal time
 for idx_method, method in enumerate(rm_list):
     plt.scatter(finalprice[:,idx_method],
-                rewards_total[:,idx_method] + np.maximum( env.params["K"]+ finalprice[:,idx_method], 0),
+                -rewards_total[:,idx_method] - np.maximum( env.params["K"]- finalprice[:,idx_method], 0),
                 alpha=0.15,
                 s=2,
                 color=utils.mred)    
@@ -276,7 +276,7 @@ for idx_method, method in enumerate(rm_list):
 
 ### PLOT - Quadratic Hedging Error
 for idx_method, method in enumerate(rm_list):
-    plt.hist((-rewards_total[:,idx_method] + np.maximum( env.params["K"]-finalprice[:,idx_method] , 0))**2,
+    plt.hist((rewards_total[:,idx_method] - 0*np.maximum( env.params["K"]-finalprice[:,idx_method] , 0))**2,
                 alpha=0.15,
                 color=utils.mred)    
     plt.title('Quadratic Hedging Error')

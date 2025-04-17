@@ -67,8 +67,8 @@ kappa_semidev = [ -99] # coefficient for the mean semideviation
 r_semidev = [-99] # exponent of the mean-semideviation
 
 print_progress = 200 # number of epochs before printing the time/loss
-plot_progress = 50 # number of epochs before plotting the policy/value function
-save_progress = 100 # number of epochs before saving the policy/value function ANNs
+plot_progress = 20 # number of epochs before plotting the policy/value function
+save_progress = 20 # number of epochs before saving the policy/value function ANNs
 
 """
 End of Parameters

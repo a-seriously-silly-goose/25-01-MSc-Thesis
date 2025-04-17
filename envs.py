@@ -17,8 +17,10 @@ class HedgingEnv():
         # parameters and spaces
         self.params = params
         self.spaces = {'t_space' : np.arange(params["Ndt"]),
-                      'S_space' : np.linspace(params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*-3),
-                                              params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*3), 31),
+                        'S_space' : np.linspace(params["S0"]*np.exp(-1/2*params["sigma"]**2 *params["T"]+np.sqrt(params["sigma"]**2 *params["T"])*-3),
+                                               params["S0"]*np.exp(-1/2*params["sigma"]**2 *params["T"]+np.sqrt(params["sigma"]**2 *params["T"])*3), 31),
+                      #'S_space' : np.linspace(params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*-3),
+                      #                        params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*3), 31),
                       'v_space' : np.linspace(params["v0"], params["v0"], 31),
                       # for Heston
                       # 'v_space' : np.linspace(0.0, 2*params["eta"]*params["v0"], 31),
@@ -44,8 +46,12 @@ class HedgingEnv():
             S0, v0, alpha_m1, B0 = self.reset(Nsims)
         else:
             S0 = self.params["S0"] * \
-                    T.exp(-1/2*self.params["theta"]*self.params["T"] + \
-                        np.sqrt(self.params["theta"]*self.params["T"]) * T.randn(size=(Nsims,), device=self.device))
+                    T.exp((self.params['mu']- .5 *self.params["sigma"]**2)* time + \
+                    self.params["sigma"] * np.sqrt(time)*T.randn(size = (Nsims,), device=self.device))
+            
+            #S0 = self.params["S0"] * \
+            #        T.exp(-1/2*self.params["theta"]*self.params["T"] + \
+            #            np.sqrt(self.params["theta"]*self.params["T"]) * T.randn(size=(Nsims,), device=self.device))
             v0 = self.params["v0"]*T.ones(Nsims)
             alpha_m1 = -self.params["max_alpha"] + 2*self.params["max_alpha"]*T.rand(size=(Nsims,), device=self.device)
             B0 = -(self.params["S0"]*alpha_m1) + 0.75*T.randn(size=(Nsims,), device=self.device)
