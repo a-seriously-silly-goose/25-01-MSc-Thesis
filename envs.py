@@ -27,6 +27,7 @@ class BlackScholesEnv:
         self.sigma = params["sigma"]
         self.epsilon = params["epsilon"]
         self.S0 = params["S0"]
+        self.B0 = params["B0"]
         self.spaces = {
             "t_space": np.arange(params["Ndt"]),
             "S_space": np.linspace(

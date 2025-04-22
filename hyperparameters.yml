@@ -140,9 +140,9 @@ v002.000.001:
 
 d002.000.001:
   envParams:
-    S0: 30 # initial stock price
+    S0: 10 # initial stock price
     B0: 0 # initial bank account
-    K: 30 # strike price 
+    K: 10 # strike price
     T: .08333333 # time to maturity
     mu: 0.1 # drift in GBM
     sigma: .02 # volatility in GBM

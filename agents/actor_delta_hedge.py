@@ -27,10 +27,10 @@ class DeltaHedgeActor:
         time_t,  # time
         choose,  # 'best' | 'random'
         seed=None,
-    ):
+    ) -> (T.Tensor, T.Tensor):
         """Select action using Black-Scholes delta."""
         stock_price = S_t
-        time_to_maturity = self.env.T - time_t * self.env.dt
+        time_to_maturity = self.env.T - time_t
         volatility = v_t
         strike = self.env.K
         risk_free_rate = self.env.r
@@ -91,8 +91,7 @@ class DeltaHedgeActor:
             timestep[:, t_idx] = t_idx
 
             # get actions from the policy (inner)
-            # u_t[:, :, t_idx], log_prob_t[:, :, t_idx] \
-            test_u, test_t = self.select_actions(
+            u_t[:, :, t_idx], log_prob_t[:, :, t_idx] = self.select_actions(
                 S[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
                 v[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
                 alpha[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
@@ -139,6 +138,148 @@ class DeltaHedgeActor:
         }  # log-prob from the actions
 
         return trajs, transitions
+
+    def plot_current_policy(self):
+        """Plot the current delta hedging policy."""
+        plt.figure(figsize=(10, 6))
+        S = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
+        t = np.linspace(0, self.env.T, 50)
+        S_grid, t_grid = np.meshgrid(S, t)
+
+        deltas = np.zeros_like(S_grid)
+        for i in range(len(t)):
+            for j in range(len(S)):
+                state = [S_grid[i, j], 0, t_grid[i, j]]  # Assuming zero hedge position
+                deltas[i, j] = self.select_actions(state).item()
+
+        plt.contourf(S_grid, t_grid, deltas)
+        plt.colorbar(label="Delta")
+        plt.xlabel("Stock Price")
+        plt.ylabel("Time")
+        plt.title("Delta Hedging Policy")
+        plt.savefig(os.path.join(self.repo, self.method, "delta_policy.png"))
+        plt.close()
+
+    def plot_current_policy2(self):
+        """Plot the current delta hedging policy as a function of stock price and time."""
+        plt.figure(figsize=(10, 6))
+
+        # Define grid over stock price and time
+        S_vals = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
+        t_vals = np.linspace(0, self.env.T, 50)
+        S_grid, t_grid = np.meshgrid(S_vals, t_vals)
+
+        # Assume constant volatility and hedge position for the plot
+        v_fixed = self.env.sigma
+        alpha_fixed = 0
+        B_fixed = self.env.B0
+
+        # Compute delta values
+        deltas = np.zeros_like(S_grid)
+        for i in range(t_grid.shape[0] - 1):
+            for j in range(S_grid.shape[1]):
+                S_t = S_grid[i, j]
+                time_t = t_grid[i, j]  # convert to time index
+                delta, _ = self.select_actions(
+                    S_t,
+                    v_fixed,
+                    alpha_fixed,
+                    B_fixed,
+                    time_t,
+                    choose="random",
+                )
+                deltas[i, j] = delta.item()
+
+        # Plot the delta surface
+        contour = plt.contourf(S_grid, t_grid, deltas, cmap="viridis")
+        plt.colorbar(contour, label="Delta")
+        plt.xlabel("Stock Price")
+        plt.ylabel("Time to Maturity")
+        plt.title("Delta Hedging Policy")
+
+        # Save the plot
+        save_path = os.path.join(self.repo, self.method, "delta_policy.png")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        plt.close()
+
+    def plot_delta_vs_stock_price(self):
+        """Plot the delta hedging policy as a function of stock price."""
+        plt.figure(figsize=(10, 6))
+
+        # Define grid over stock price
+        S_vals = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
+        t_fixed = self.env.T / 2  # Fixed time value (e.g., halfway to maturity)
+
+        # Assume constant volatility and hedge position
+        v_fixed = self.env.sigma
+        alpha_fixed = 0
+        B_fixed = self.env.B0
+
+        # Compute delta values
+        deltas = np.zeros_like(S_vals)
+        for j, S_t in enumerate(S_vals):
+            delta, _ = self.select_actions(
+                S_t,
+                v_fixed,
+                alpha_fixed,
+                B_fixed,
+                t_fixed,
+                choose="random",
+            )
+            deltas[j] = delta.item()
+
+        # Plot the delta curve
+        plt.plot(S_vals, deltas, label=f"Time = {t_fixed:.2f}")
+        plt.xlabel("Stock Price")
+        plt.ylabel("Delta")
+        plt.title("Delta Hedging Policy vs Stock Price")
+        plt.legend()
+
+        # Save the plot
+        save_path = os.path.join(self.repo, self.method, "delta_vs_stock_price.png")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        plt.close()
+
+    def plot_delta_vs_time(self):
+        """Plot the delta hedging policy as a function of time."""
+        plt.figure(figsize=(10, 6))
+
+        # Define grid over time
+        t_vals = np.linspace(0, self.env.T, 50)
+        S_fixed = self.env.S0  # Fixed stock price
+
+        # Assume constant volatility and hedge position
+        v_fixed = self.env.sigma
+        alpha_fixed = 0
+        B_fixed = self.env.B0
+
+        # Compute delta values
+        deltas = np.zeros_like(t_vals)
+        for i, time_t in enumerate(t_vals):
+            delta, _ = self.select_actions(
+                S_fixed,
+                v_fixed,
+                alpha_fixed,
+                B_fixed,
+                time_t,
+                choose="random",
+            )
+            deltas[i] = delta.item()
+
+        # Plot the delta curve
+        plt.plot(t_vals, deltas, label=f"Stock Price = {S_fixed:.2f}")
+        plt.xlabel("Time to Maturity")
+        plt.ylabel("Delta")
+        plt.title("Delta Hedging Policy vs Time")
+        plt.legend()
+
+        # Save the plot
+        save_path = os.path.join(self.repo, self.method, "delta_vs_time.png")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        plt.close()
 
     def reset_variables(self, Ntrajectories, Mtransitions):
         # initialize tables for all trajectories
@@ -236,67 +377,3 @@ class DeltaHedgeActor:
             log_prob_t,
             cost_t,
         )
-
-    def plot_current_policy(self):
-        """Plot the current delta hedging policy."""
-        plt.figure(figsize=(10, 6))
-        S = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
-        t = np.linspace(0, self.env.T, 50)
-        S_grid, t_grid = np.meshgrid(S, t)
-
-        deltas = np.zeros_like(S_grid)
-        for i in range(len(t)):
-            for j in range(len(S)):
-                state = [S_grid[i, j], 0, t_grid[i, j]]  # Assuming zero hedge position
-                deltas[i, j] = self.select_actions(state).item()
-
-        plt.contourf(S_grid, t_grid, deltas)
-        plt.colorbar(label="Delta")
-        plt.xlabel("Stock Price")
-        plt.ylabel("Time")
-        plt.title("Delta Hedging Policy")
-        plt.savefig(os.path.join(self.repo, self.method, "delta_policy.png"))
-        plt.close()
-
-    def plot_current_policy2(self):
-        """Plot the current delta hedging policy as a function of stock price and time."""
-        plt.figure(figsize=(10, 6))
-
-        # Define grid over stock price and time
-        S_vals = np.linspace(0.5 * self.env.sigma, 1.5 * self.env.S0, 100)
-        t_vals = np.linspace(0, self.env.T, 50)
-        S_grid, t_grid = np.meshgrid(S_vals, t_vals)
-
-        # Assume constant volatility and hedge position for the plot
-        v_fixed = self.env.sigma
-        alpha_fixed = 0.0
-        B_fixed = 0.0
-
-        # Compute delta values
-        deltas = np.zeros_like(S_grid)
-        for i in range(t_grid.shape[0] - 1):
-            for j in range(S_grid.shape[1]):
-                S_t = S_grid[i, j]
-                time_t = t_grid[i, j] / self.env.dt  # convert to time index
-                delta, _ = self.select_actions(
-                    S_t,
-                    v_fixed,
-                    alpha_fixed,
-                    B_fixed,
-                    time_t,
-                    choose="random",
-                )
-                deltas[i, j] = delta.item()
-
-        # Plot the delta surface
-        contour = plt.contourf(S_grid, t_grid, deltas, cmap="viridis")
-        plt.colorbar(contour, label="Delta")
-        plt.xlabel("Stock Price")
-        plt.ylabel("Time to Maturity")
-        plt.title("Delta Hedging Policy")
-
-        # Save the plot
-        save_path = os.path.join(self.repo, self.method, "delta_policy.png")
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path)
-        plt.close()

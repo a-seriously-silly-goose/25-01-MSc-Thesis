@@ -1,5 +1,5 @@
 *** Name of the repository:  d002.000.001 ***
-*** Environment parameters:  {'S0': 30, 'B0': 0, 'K': 30, 'T': 0.08333333, 'mu': 0.1, 'sigma': 0.02, 'r': 0.01, 'epsilon': 0, 'alpha0': 0, 'max_alpha': 8, 'Ndt': 31, 'kappa': 9, 'theta': 0.1, 'eta': 0.1, 'v0': 0.02} ***
+*** Environment parameters:  {'S0': 10, 'B0': 0, 'K': 10, 'T': 0.08333333, 'mu': 0.1, 'sigma': 0.02, 'r': 0.01, 'epsilon': 0, 'alpha0': 0, 'max_alpha': 8, 'Ndt': 31, 'kappa': 9, 'theta': 0.1, 'eta': 0.1, 'v0': 0.02} ***
 *** Algorithm parameters:  {'Ntrajectories': 50, 'Mtransitions': 50, 'Nepochs': 40, 'gamma': 1, 'seed': 42, 'Nepochs_V_init': 150, 'Nepochs_V': 300, 'lr_V': 0.0005, 'batch_V': 20, 'hidden_V': 16, 'layers_V': 4, 'Nepochs_pi': 20, 'lr_pi': 0.0005, 'batch_pi': 20, 'hidden_pi': 16, 'layers_pi': 3} ***
 *** Risk measures parameters:  {'method': 'mean'} ***
 *** Run parameters:  None ***

@@ -1,4 +1,3 @@
-# %%
 from agents.actor_delta_hedge import DeltaHedgeActor
 from envs import BlackScholesEnv
 import torch as T
@@ -15,7 +14,6 @@ import argparse
 import yaml
 
 
-# %%
 def setup_experiment(hyperparameters_version, is_training=False, preload=False):
     import yaml
     import os
@@ -80,7 +78,6 @@ def setup_experiment(hyperparameters_version, is_training=False, preload=False):
     }
 
 
-# %%
 config = setup_experiment(
     hyperparameters_version="d002.000.001", is_training=True, preload=False
 )
@@ -88,7 +85,6 @@ config = setup_experiment(
 # Now you can pass `config` to build the env, agent, etc.
 
 
-# %%
 env = BlackScholesEnv(config["envParams"])
 DH_agent = DeltaHedgeActor(
     os.getcwd(),
@@ -99,9 +95,9 @@ DH_agent = DeltaHedgeActor(
 )
 
 
-# %%
 test_trajectories = DH_agent.sim_trajectories(1, 5)
 
-# %%
 
 DH_agent.plot_current_policy2()
+DH_agent.plot_delta_vs_time()
+DH_agent.plot_delta_vs_stock_price()
