@@ -35,8 +35,45 @@ class DeltaHedgeActor:
         strike = self.env.K
         risk_free_rate = self.env.r
 
+        # Ensure `time_to_maturity` and `volatility` are tensors and clamp for numerical stability
+        T.clamp(T.tensor(time_to_maturity, dtype=T.float32, device=self.device), 1e-6)
+        T.clamp(T.tensor(volatility, dtype=T.float32, device=self.device), 1e-6)
+        T.clamp(T.tensor(stock_price, dtype=T.float32, device=self.device), 1e-6)
+
+        strike = max(strike, 1e-6)  # Ensure the strike price is positive
+
+        # Black-Scholes d1 calculation
+        d1 = (
+            T.log(stock_price / strike)
+            + (risk_free_rate + 0.5 * volatility**2) * time_to_maturity
+        ) / (volatility * T.sqrt(time_to_maturity))
+
+        # Calculate delta using CDF of normal distribution
+        delta = T.tensor(
+            norm.cdf(d1.cpu().numpy()), device=self.device, dtype=T.float32
+        )
+
+        return delta, T.zeros_like(delta)
+
+    def select_actions2(
+        self,
+        S_t,  # price of the stock
+        v_t,  # volatility of the stock
+        alpha_t,  # amount of the stock held by the agent
+        B_t,  # bank account cash-flow
+        time_t,  # time
+        choose,  # 'best' | 'random'
+        seed=None,
+    ) -> (T.Tensor, T.Tensor):
+        """Select action using Black-Scholes delta."""
+        stock_price = S_t
+        time_to_maturity = self.env.T - time_t
+        volatility = v_t
+        strike = self.env.K
+        risk_free_rate = self.env.r
+
         # freeze the set of random normal variables
-        if seed is not None:
+        if seed:
             T.manual_seed(seed)
             np.random.seed(seed)
 
@@ -142,55 +179,44 @@ class DeltaHedgeActor:
     def plot_current_policy(self):
         """Plot the current delta hedging policy."""
         plt.figure(figsize=(10, 6))
-        S = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
-        t = np.linspace(0, self.env.T, 50)
-        S_grid, t_grid = np.meshgrid(S, t)
 
-        deltas = np.zeros_like(S_grid)
-        for i in range(len(t)):
-            for j in range(len(S)):
-                state = [S_grid[i, j], 0, t_grid[i, j]]  # Assuming zero hedge position
-                deltas[i, j] = self.select_actions(state).item()
-
-        plt.contourf(S_grid, t_grid, deltas)
-        plt.colorbar(label="Delta")
-        plt.xlabel("Stock Price")
-        plt.ylabel("Time")
-        plt.title("Delta Hedging Policy")
-        plt.savefig(os.path.join(self.repo, self.method, "delta_policy.png"))
-        plt.close()
-
-    def plot_current_policy2(self):
-        """Plot the current delta hedging policy as a function of stock price and time."""
-        plt.figure(figsize=(10, 6))
-
-        # Define grid over stock price and time
-        S_vals = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
-        t_vals = np.linspace(0, self.env.T, 50)
+        # Define grid over stock price (S) and time (t)
+        S_vals = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)  # Stock prices
+        t_vals = np.linspace(0, self.env.T, 50)  # Time to maturity
         S_grid, t_grid = np.meshgrid(S_vals, t_vals)
 
-        # Assume constant volatility and hedge position for the plot
-        v_fixed = self.env.sigma
-        alpha_fixed = 0
-        B_fixed = self.env.B0
+        # Assume constant values for volatility (v), hedge position (alpha), and bank account (B)
+        v_fixed = T.tensor(
+            [self.env.sigma], dtype=T.float32, device=self.device
+        )  # Fixed volatility
+        alpha_fixed = T.tensor(
+            [0.0], dtype=T.float32, device=self.device
+        )  # No hedge initially
+        B_fixed = T.tensor(
+            [self.env.B0], dtype=T.float32, device=self.device
+        )  # Initial bank account
 
-        # Compute delta values
+        # Compute deltas for the grid of stock prices and times
         deltas = np.zeros_like(S_grid)
-        for i in range(t_grid.shape[0] - 1):
+        for i in range(t_grid.shape[0]):
             for j in range(S_grid.shape[1]):
-                S_t = S_grid[i, j]
-                time_t = t_grid[i, j]  # convert to time index
+                S_t = T.tensor(
+                    [S_grid[i, j]], dtype=T.float32, device=self.device
+                )  # Current stock price
+                time_t = T.tensor(
+                    [t_grid[i, j]], dtype=T.float32, device=self.device
+                )  # Time to maturity
                 delta, _ = self.select_actions(
                     S_t,
                     v_fixed,
                     alpha_fixed,
                     B_fixed,
                     time_t,
-                    choose="random",
+                    choose="best",  # Use the best (deterministic) action for plotting
                 )
-                deltas[i, j] = delta.item()
+                deltas[i, j] = delta.item()  # Add computed delta to the grid
 
-        # Plot the delta surface
+        # Plot the computed delta hedging policy as a 2D contour
         contour = plt.contourf(S_grid, t_grid, deltas, cmap="viridis")
         plt.colorbar(contour, label="Delta")
         plt.xlabel("Stock Price")
@@ -201,6 +227,7 @@ class DeltaHedgeActor:
         save_path = os.path.join(self.repo, self.method, "delta_policy.png")
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path)
+        print(f"Delta Hedging Policy plot saved at: {save_path}")
         plt.close()
 
     def plot_delta_vs_stock_price(self):

@@ -143,9 +143,9 @@ d002.000.001:
     S0: 10 # initial stock price
     B0: 0 # initial bank account
     K: 10 # strike price
-    T: .08333333 # time to maturity
-    mu: 0.1 # drift in GBM
-    sigma: .02 # volatility in GBM
+    T: 0.08333333 # time to maturity
+    mu: 0.00 # drift in GBM
+    sigma: 0.2 # volatility in GBM
     r: 0.01 # risk-free rate
     epsilon: 0 # transaction cost
     alpha0: 0 # initial position
@@ -154,7 +154,7 @@ d002.000.001:
     kappa: 9
     theta: 0.1
     eta: 0.1
-    v0: 0.02 # initial variance
+    v0: 0.2 # initial variance
   
   algoParams:
    # note: the next two must match!

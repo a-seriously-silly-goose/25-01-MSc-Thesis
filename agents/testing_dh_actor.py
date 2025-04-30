@@ -1,30 +1,19 @@
 from agents.actor_delta_hedge import DeltaHedgeActor
 from envs import BlackScholesEnv
 import torch as T
-
-# personal files
-from models import PolicyApprox, ValueApprox
-from risk_measure import RiskMeasure
-from envs import BlackScholesEnv
-from agents.actor_critic_pg import ActorCriticPG
-
-# misc
+import matplotlib.pyplot as plt
+import numpy as np
 import os
-import argparse
 import yaml
 
 
 def setup_experiment(hyperparameters_version, is_training=False, preload=False):
-    import yaml
-    import os
-    import torch as T
-    from datetime import datetime
-
-    # Paths & Device
+    """
+    Sets up the experimental configuration, retrieves hyperparameters, and initializes directories.
+    """
     RUNS_DIR = "runs"
     os.makedirs(RUNS_DIR, exist_ok=True)
     device = T.device("cuda" if T.cuda.is_available() else "cpu")
-
     root_path = os.path.join(os.path.dirname(os.getcwd()))
 
     # Load hyperparameters
@@ -45,8 +34,6 @@ def setup_experiment(hyperparameters_version, is_training=False, preload=False):
         f"*** Algorithm parameters:  {algoParams} ***\n"
         f"*** Risk measures parameters:  {riskParams} ***\n"
         f"*** Run parameters:  {runParams} ***\n"
-        f"*** Risk measures:  ['mean'] ***\n"
-        f"*** alpha_cvar:  {[0.2]}"
     )
     print(log_message)
 
@@ -78,12 +65,55 @@ def setup_experiment(hyperparameters_version, is_training=False, preload=False):
     }
 
 
+def plot_env_paths(env, n_paths=10, n_steps=100, save_path="stock_price_paths.png"):
+    """
+    Simulates stock price paths and plots them.
+
+    Parameters:
+        env (BlackScholesEnv): The environment to simulate.
+        n_paths (int): Number of paths to simulate.
+        n_steps (int): Number of time steps to simulate.
+        save_path (str): Path to save the generated plot.
+    """
+    # Reset environment for initial conditions
+    S, v, alpha, B = env.reset(Nsims=n_paths)
+
+    # Initialize storage for paths
+    stock_paths = T.zeros((n_steps, n_paths), dtype=T.float)
+    stock_paths[0, :] = S  # Initial stock price
+
+    # Simulate paths
+    for t in range(1, n_steps):
+        alpha_tm1 = alpha
+        B_t = B
+
+        # Simple assumption for no hedging changes (constant alpha)
+        alpha_t = alpha_tm1
+
+        # Perform environment step
+        S, v, alpha, B, _ = env.step(S, v, alpha_tm1, B_t, alpha_t)
+        stock_paths[t, :] = S  # Store current step's stock prices
+
+    # Plot the paths
+    plt.figure(figsize=(10, 6))
+    for i in range(n_paths):
+        plt.plot(stock_paths[:, i], label=f"Path {i + 1}")
+    plt.xlabel("Time Step")
+    plt.ylabel("Stock Price")
+    plt.title("Simulated Stock Price Paths")
+    # plt.legend(loc="best", ncol=2, fontsize="small", frameon=False)
+    plt.tight_layout()
+
+    # Save the plot to the specified path
+    plt.savefig(save_path)
+    print(f"Stock price paths plot saved at: {save_path}")
+    plt.show()
+
+
+# Load configuration and setup environment
 config = setup_experiment(
     hyperparameters_version="d002.000.001", is_training=True, preload=False
 )
-
-# Now you can pass `config` to build the env, agent, etc.
-
 
 env = BlackScholesEnv(config["envParams"])
 DH_agent = DeltaHedgeActor(
@@ -94,10 +124,10 @@ DH_agent = DeltaHedgeActor(
     config["log_file"],
 )
 
+# Simulate and plot environment paths
+plot_env_paths(env, n_paths=1000, n_steps=100)
 
-test_trajectories = DH_agent.sim_trajectories(1, 5)
-
-
-DH_agent.plot_current_policy2()
+# Test existing DeltaHedgeActor plots
+DH_agent.plot_current_policy()
 DH_agent.plot_delta_vs_time()
 DH_agent.plot_delta_vs_stock_price()
