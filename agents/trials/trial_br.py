@@ -88,7 +88,7 @@ replication_agent = BehaviorReplicationAgent(
 )
 
 # Train the replication agent to imitate the delta hedge act or
-replication_agent.load_policy(replication_agent.PI_MODEL_FILE)
+# replication_agent.load_policy(replication_agent.PI_MODEL_FILE)
 
 print("Starting behavior replication...")
 replication_agent.replicate_delta_hedging(delta_hedge_actor)

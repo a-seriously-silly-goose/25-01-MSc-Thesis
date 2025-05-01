@@ -120,6 +120,7 @@ class BehaviorReplicationAgent:
                 self.plot_current_policy(epoch)
                 self.plot_action_vs_price()
                 self.plot_action_vs_time()
+                self.save_policy()
 
     def replicate_delta_hedging2(self, delta_hedge_actor, epochs=1000):
         """
@@ -129,7 +130,7 @@ class BehaviorReplicationAgent:
         delta_hedge_actor: The actor to mimic.
         epochs: Number of epochs for replication training.
         """
-        optimizer = T.optim.Adam(self.policy.parameters(), lr=1e-3)
+        optimizer = T.optim.Adam(self.policy.parameters(), lr=1e-4)
         loss_func = T.nn.MSELoss()
 
         # Generate grid for training
@@ -178,6 +179,7 @@ class BehaviorReplicationAgent:
                 self.plot_current_policy(epoch)
                 self.plot_action_vs_price()
                 self.plot_action_vs_time()
+                self.save_policy()
 
     def plot_current_policy(self, epoch):
         """
