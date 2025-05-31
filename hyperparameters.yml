@@ -1,5 +1,46 @@
-
 # version - itteration - run
+
+# the same parameters as CJ21
+vCJ21:
+  envParams:
+    S0: 10 # initial stock price
+    K: 10 # strike price
+    v0: 0.04 # initial variance
+    kappa: 9
+    theta: 0.0625
+    eta: 1
+    T: .08333333 # time to maturity
+    rho: -0.5
+    mu: 0.1 # drift in GBM
+    r: 0.01 # risk-free rate
+    B0: 0 # initial bank account
+    epsilon: 0 # transaction cost
+    max_alpha: 3 # maximum position
+    Ndt: 31 # number of time steps
+
+  algoParams:
+   # note: the next two must match!
+    Ntrajectories : 500 # number of generated trajectories
+    Mtransitions : 500 # number of additional transitions for each state
+    Nepochs : 400 # number of epochs of the whole algorithm
+    gamma : 1 # discount factor
+    Nepochs_V_init : 1500 # number of epochs for the estimation of V during the first epoch
+    Nepochs_V : 300 # number of epochs for the estimation of V
+    lr_V : .0005 # learning rate of the neural net associated with V
+    batch_V : 200 # number of trajectories for each mini-batch in estimating V
+    hidden_V : 16 # number of hidden nodes in the neural net associated with V
+    layers_V : 4 # number of layers in the neural net associated with V
+    Nepochs_pi : 10 # number of epoch for the update of pi
+    lr_pi : .0005 # learning rate of the neural net associated with pi
+    batch_pi : 200 # number of trajectories for each mini-batch when updating pi
+    hidden_pi : 16 # number of hidden nodes in the neural net associated with pi
+    layers_pi : 3 # number of layers in the neural net associated with pi
+    seed : 42 # (int or None) set seed for replication purposes
+
+  riskParams:
+    method: 'mean'
+
+  runParams:
 
 # try more extreme params
 v002.000.002:

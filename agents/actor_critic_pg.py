@@ -41,7 +41,10 @@ class ActorCriticPG:
         LOG_FILE,
     ):  # discount factor
 
-        with open("../hyperparameters.yml", "r") as file:
+        with open(
+            "/Users/simeon/Documents/GitHub/03 University/25 01 MSc Thesis/hyperparameters.yml",
+            "r",
+        ) as file:
             all_hyperparameter_sets = yaml.safe_load(file)
             hyperparameters = all_hyperparameter_sets[hyperparameter_set]
 
