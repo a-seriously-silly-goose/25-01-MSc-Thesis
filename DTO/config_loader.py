@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from DTO.input_parameters_dtos import EnvParams, AlgoParams, RiskParams, RunParams
+from DTO.input_dtos import EnvParams, AlgoParams, RiskParams, RunParams
 
 
 def load_config(path: str, version: str):
@@ -31,6 +31,6 @@ def load_config(path: str, version: str):
     env_params = EnvParams(**experiment_config["envParams"])
     algo_params = AlgoParams(**experiment_config["algoParams"])
     risk_params = RiskParams(**experiment_config["riskParams"])
-    run_params = RunParams(**experiment_config.get("runParams", {}))
+    # run_params = RunParams(**experiment_config.get("runParams", {}))
 
-    return env_params, algo_params, risk_params, run_params
+    return env_params, algo_params, risk_params #, run_params
