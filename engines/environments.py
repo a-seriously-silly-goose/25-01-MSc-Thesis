@@ -1,163 +1,203 @@
 """
-Environment
-
-
+Environment Base, Black-Scholes and Heston Implementation
 """
-
-# numpy
+from abc import ABC, abstractmethod
 import numpy as np
-
-# pytorch
 import torch as T
-
-# misc
-import pdb  # use with set_trace() for the debugger
+from DTO.input_parameters_dtos import EnvParams
 
 
-class BlackScholesEnv:
-    # constructor
-    def __init__(self, params):
-        # parameters and spaces
+class BaseEnv(ABC):
+    """
+    Abstract base class for financial market simulation environments.
+    """
+
+    def __init__(self, params: EnvParams):
+        """
+        Initialize the environment with a configuration dictionary.
+        """
         self.params = params
-        self.T = params["T"]
-        self.Ndt = params["Ndt"]
-        self.dt = self.T / self.Ndt
-        self.K = params["K"]
-        self.r = params["r"]
-        self.sigma = params["sigma"]
-        self.epsilon = params["epsilon"]
-        self.S0 = params["S0"]
-        self.B0 = params["B0"]
-        self.spaces = {
-            "t_space": np.arange(params["Ndt"]),
-            "S_space": np.linspace(
-                params["S0"]
-                * np.exp(
-                    -1 / 2 * params["sigma"] ** 2 * params["T"]
-                    + np.sqrt(params["sigma"] ** 2 * params["T"]) * -3
-                ),
-                params["S0"]
-                * np.exp(
-                    -1 / 2 * params["sigma"] ** 2 * params["T"]
-                    + np.sqrt(params["sigma"] ** 2 * params["T"]) * 3
-                ),
-                31,
-            ),
-            #'S_space' : np.linspace(params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*-3),
-            #                        params["S0"]*np.exp(-1/2*params["theta"]*params["T"]+np.sqrt(params["theta"]*params["T"])*3), 31),
-            "v_space": np.linspace(params["v0"], params["v0"], 31),
-            # for Heston
-            # 'v_space' : np.linspace(0.0, 2*params["eta"]*params["v0"], 31),
-            "alpha_space": np.linspace(-params["max_alpha"], params["max_alpha"], 31),
-            "B_space": np.linspace(
-                params["B0"] - params["S0"] * params["max_alpha"],
-                params["B0"] + params["S0"] * params["max_alpha"],
-                31,
-            ),
-        }
+        self.params.dt = self.params.T / self.params.Ndt
+        self.params.sqrt_dt = np.sqrt(self.params.dt)
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
 
-    # initialization of the environment with its true initial state
-    def reset(self, Nsims=1):
-        S0 = self.params["S0"] * T.ones(Nsims)  # price
-        v0 = self.params["v0"] * T.ones(Nsims)  # volatility
-        alpha_m1 = T.zeros(Nsims)  # amount of the stock
-        B0 = self.params["B0"] * T.ones(Nsims)  # bank account cash-flow
 
+        # Define discretized state/action spaces
+        self.spaces = {
+            "t_space": np.arange(self.params.Ndt + 1) * self.params.dt,
+            "S_space": np.linspace(
+                self.params.S0
+                * np.exp(
+                    -0.5 * self.params.sigma ** 2 * self.params.T
+                    + np.sqrt(self.params.sigma ** 2 * self.params.T) * -3
+                ),
+                self.params.S0
+                * np.exp(
+                    -0.5 * self.params.sigma ** 2 * self.params.T
+                    + np.sqrt(self.params.sigma ** 2 * self.params.T) * 3
+                ),
+                self.params.Ndt + 1,
+            ),
+            "alpha_space": np.linspace(-self.params.max_alpha, self.params.max_alpha, self.params.Ndt + 1),
+            "B_space": np.linspace(
+                self.params.B0 - self.params.S0 * self.params.max_alpha,
+                self.params.B0 + self.params.S0 * self.params.max_alpha,
+                self.params.Ndt + 1,
+            ),
+        }
+
+    @abstractmethod
+    def reset(self, Nsims: int = 1):
+        """Reset the environment to its canonical initial state."""
+        S0 = self.params.S0 * T.ones(Nsims, device=self.device)
+        v0 = self.params.v0 * T.ones(Nsims, device=self.device)
+        alpha_m1 = T.zeros(Nsims, device=self.device)
+        B0 = self.params.B0 * T.ones(Nsims, device=self.device)
         return S0, v0, alpha_m1, B0
 
-    # initialization of the environment with multiple random states
+    @abstractmethod
+    def random_reset(self, time: float, Nsims: int = 1):
+        """Reset the environment to a random state at a given time."""
+        pass
+
+    @abstractmethod
+    def step(self, S_t, v_t, alpha_tm1, B_t, alpha_t):
+        """Simulate one step forward in time."""
+        pass
+
+
+class BlackScholesEnv(BaseEnv):
+    """
+    Black-Scholes environment for option hedging and trading.
+    """
+
+    def __init__(self, params: EnvParams):
+        super().__init__(params)
+
     def random_reset(self, time, Nsims=1):
         if time == self.spaces["t_space"][0]:
-            S0, v0, alpha_m1, B0 = self.reset(Nsims)
-        else:
-            S0 = self.params["S0"] * T.exp(
-                (self.params["mu"] - 0.5 * self.params["sigma"] ** 2) * time
-                + self.params["sigma"]
-                * np.sqrt(time)
-                * T.randn(size=(Nsims,), device=self.device)
-            )
+            return self.reset(Nsims)
 
-            # S0 = self.params["S0"] * \
-            #        T.exp(-1/2*self.params["theta"]*self.params["T"] + \
-            #            np.sqrt(self.params["theta"]*self.params["T"]) * T.randn(size=(Nsims,), device=self.device))
-            v0 = self.params["v0"] * T.ones(Nsims)
-            alpha_m1 = -self.params["max_alpha"] + 2 * self.params[
-                "max_alpha"
-            ] * T.rand(size=(Nsims,), device=self.device)
-            B0 = -(self.params["S0"] * alpha_m1) + 0.75 * T.randn(
-                size=(Nsims,), device=self.device
-            )
+        S0 = self.params.S0 * T.exp(
+            (self.params.mu - 0.5 * self.params.sigma ** 2) * time
+            + self.params.sigma
+            * np.sqrt(time)
+            * T.randn(size=(Nsims,), device=self.device)
+        )
+
+        v0 = self.params.v0 * T.ones(Nsims, device=self.device)
+        alpha_m1 = -self.params.max_alpha + 2 * self.params.max_alpha * T.rand(size=(Nsims,), device=self.device)
+        B0 = -(self.params.S0 * alpha_m1) + 0.75 * T.randn(size=(Nsims,), device=self.device)
 
         return S0, v0, alpha_m1, B0
 
-    # simulation engine
     def step(self, S_t, v_t, alpha_tm1, B_t, alpha_t):
-        # S_t : price of the stock
-        # v_t : volatility of the stock
-        # alpha_tm1 : amount of the stock held by the agent
-        # B_t : bank account cash-flow
-        # alpha_t : new amount of the stock held by the agent (action)
-
+        """
+        Simulate one step of the Black-Scholes dynamics.
+        """
         Nsims = list(S_t.shape)
-        # add back for Heston
-        # Nsims.append(2)
 
-        # time intervals
-        dt = self.params["T"] / self.params["Ndt"]
-        sqrt_dt = np.sqrt(dt)
-        vp = T.maximum(v_t, T.zeros(1))
-
-        # correlation matrix
-        # Omega = T.Tensor([[1, self.params["rho"]], [0, np.sqrt(1-self.params["rho"]**2)]])
-
-        # generate correlated brownian motions
-
-        # for Heston
-        # W = T.einsum('...k,kl->...l', T.randn((Nsims), device=self.device), Omega)
-
-        # simulate the price
+        # Asset price dynamics
         S_tp1 = S_t * T.exp(
-            (self.params["r"] - 0.5 * self.params["sigma"] ** 2) * dt
-            + self.params["sigma"] * sqrt_dt * T.randn(Nsims, device=self.device)
+            (self.params.r - 0.5 * self.params.sigma ** 2) * self.params.dt
+            + self.params.sigma * self.sqrt_dt * T.randn(Nsims, device=self.device)
         )
 
-        # for Heston
-        # S_tp1 = S_t * T.exp((self.params["mu"]-0.5*vp)*dt + sqrt_dt*T.sqrt(vp)*W[...,0])
-
-        # simulate the volatility
+        # Volatility stays constant
         v_tp1 = v_t
 
-        # for Heston
-        # v_tp1 = v_t + self.params["kappa"] * (self.params["theta"] - vp) * dt \
-        #            + self.params["eta"] * sqrt_dt * T.sqrt(vp) * W[...,1] \
-        #            + (v_t >= 0)*(0.25 * self.params["eta"]**2 * dt * (W[...,1]**2 - 1))
+        # Bank account update
+        B_tp1 = update_bank_account(B_t, S_t, alpha_tm1, alpha_t, self.params.dt, self.params.epsilon, self.params.r)
 
-        # compute the bank account cash-flow
-        B_tplus = (
-            B_t
-            - (alpha_t - alpha_tm1) * S_t
-            - T.abs(alpha_t - alpha_tm1) * self.params["epsilon"]
+        # Wealth and reward
+        _, _, reward = compute_wealth(S_t, S_tp1, B_t, B_tp1, alpha_tm1, alpha_t)
+
+        return S_tp1, v_tp1, alpha_t, B_tp1, -reward
+
+
+class HestonEnv(BaseEnv):
+    """
+    Heston environment for option hedging with stochastic volatility.
+    """
+
+    def __init__(self, params: EnvParams):
+        super().__init__(params)
+
+        # Add v_space to spaces to account for stochastic volatility
+        self.spaces["v_space"] = np.linspace(0, 2 * self.params.v0, self.params.Ndt + 1)
+
+
+    def reset(self, Nsims=1):
+        S0 = self.params.S0 * T.ones(Nsims, device=self.device)
+        v0 = self.params.v0 * T.ones(Nsims, device=self.device)
+        alpha_m1 = T.zeros(Nsims, device=self.device)
+        B0 = self.params.B0 * T.ones(Nsims, device=self.device)
+        return S0, v0, alpha_m1, B0
+
+    def random_reset(self, time, Nsims=1):
+        if time == self.spaces["t_space"][0]:
+            return self.reset(Nsims)
+
+        S0 = self.params.S0 * T.exp(
+            (self.params.mu - 0.5 * self.params.v0) * time
+            + T.sqrt(self.params.v0 * time) * T.randn(Nsims, device=self.device)
         )
 
-        # interest rate on the bank account
-        B_tp1 = B_tplus * np.exp(self.params["r"] * dt)
+        v0 = self.params.v0 * T.ones(Nsims, device=self.device)
+        alpha_m1 = -self.params.max_alpha + 2 * self.params.max_alpha * T.rand(size=(Nsims,), device=self.device)
+        B0 = -(self.params.S0 * alpha_m1) + 0.75 * T.randn(size=(Nsims,), device=self.device)
+        return S0, v0, alpha_m1, B0
 
-        # compute the portfolio cash-flow
-        W_t = B_t + alpha_tm1 * S_t
-        W_tp1 = B_tp1 + alpha_t * S_tp1
+    def step(self, S_t, v_t, alpha_tm1, B_t, alpha_t):
+        """
+        Simulate one step of Heston dynamics.
+        """
+        Nsims = list(S_t.shape)
 
-        # calculate the reward
-        r = W_tp1 - W_t
+        # Correlated Brownian motions
+        W1 = T.randn(Nsims, device=self.device)
+        W2 = T.randn(Nsims, device=self.device)
+        W2 = self.params.rho * W1 + T.sqrt(1 - self.params.rho ** 2) * W2
 
-        return S_tp1, v_tp1, alpha_t, B_tp1, -r
+        # Volatility process (CIR)
+        v_tp1 = v_t + self.params.kappa * (self.params.theta - T.maximum(v_t, T.zeros(1))) * self.params.dt \
+                + self.params.eta * T.sqrt(T.maximum(v_t, T.zeros(1)) * self.params.dt) * W2
 
-    # terminal penalty based on inventory and call option
-    def get_final_cost(self, S_T, v_T, alpha_Tm1, B_T):
-        r = -T.abs(alpha_Tm1) * self.params["epsilon"] - self.option_price(S_T)
+        # Asset price process
+        S_tp1 = S_t * T.exp((self.params.r - 0.5 * T.maximum(v_t, T.zeros(1))) * self.params.dt
+                            + T.sqrt(T.maximum(v_t, T.zeros(1)) * self.params.dt) * W1)
 
-        return -r
+        # Bank account update
+        B_tp1 = update_bank_account(B_t, S_t, alpha_tm1, alpha_t, self.params.dt, self.params.epsilon, self.params.r)
 
-    # payoff of the option
-    def option_price(self, S):
-        return T.maximum(self.params["K"] - S, T.zeros(1))
+        # Wealth and reward
+        _, _, reward = compute_wealth(S_t, S_tp1, B_t, B_tp1, alpha_tm1, alpha_t)
+
+        return S_tp1, v_tp1, alpha_t, B_tp1, -reward
+
+
+# Shared helper functions
+def update_bank_account(B_t, S_t, alpha_tm1, alpha_t, dt, epsilon=0.0, r=0.0):
+    B_tplus = B_t - (alpha_t - alpha_tm1) * S_t - T.abs(alpha_t - alpha_tm1) * epsilon
+    return B_tplus * T.exp(r * dt)
+
+
+def compute_wealth(S_t, S_tp1, B_t, B_tp1, alpha_tm1, alpha_t):
+    W_t = B_t + alpha_tm1 * S_t
+    W_tp1 = B_tp1 + alpha_t * S_tp1
+    reward = W_tp1 - W_t
+    return W_t, W_tp1, reward
+
+
+def option_price(S, K, type='call', device='cpu'):
+    if type == 'call':
+        return T.maximum(S - K, T.zeros(1, device=device))
+    elif type == 'put':
+        return T.maximum(K - S, T.zeros(1, device=device))
+    else:
+        raise ValueError("Invalid option type. Use 'call' or 'put'.")
+
+
+def get_final_cost(S_T, v_T, alpha_Tm1, B_T, epsilon, K):
+    r = -T.abs(alpha_Tm1) * epsilon - option_price(S_T, K)
+    return -r
