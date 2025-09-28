@@ -6,6 +6,7 @@ vCJ21:
     S0: 10 # initial stock price
     K: 10 # strike price
     v0: 0.04 # initial variance
+    sigma: 0.2 # volatility in GBM
     kappa: 9
     theta: 0.0625
     eta: 1
@@ -36,6 +37,11 @@ vCJ21:
     hidden_pi : 16 # number of hidden nodes in the neural net associated with pi
     layers_pi : 3 # number of layers in the neural net associated with pi
     seed : 42 # (int or None) set seed for replication purposes
+    clip_epsilon: 0.1 # clip epsilon for the policy gradient
+    gae_lambda: 0.95 # GAE lambda for advantage estimation
+    entropy_coef: 0.01 # entropy coefficient for the policy loss
+    n_critic_updates: 10 # number of updates for the critic per epoch
+    n_actor_updates: 10 # number of updates for the actor per epoch
 
   riskParams:
     method: 'mean'

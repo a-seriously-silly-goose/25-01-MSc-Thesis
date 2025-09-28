@@ -121,6 +121,8 @@ class ActorCriticPG:
 
         # get log-probabilities of the action
         log_prob_t = actions_dist.log_prob(actions_sample.detach()).squeeze()
+        if log_prob_t.dim() == 1:
+            log_prob_t = log_prob_t.unsqueeze(-1)
 
         # verification of any problem with log_prob
         if T.isnan(log_prob_t).any() or T.isinf(log_prob_t).any():
@@ -232,7 +234,7 @@ class ActorCriticPG:
             timestep[:, t_idx] = t_idx
 
             # get actions from the policy (inner)
-            u_t[:, :, t_idx], log_prob_t[:, :, t_idx] = self.select_actions(
+            u_temp, lp_temp = self.select_actions(
                 S[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
                 v[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
                 alpha[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
@@ -240,6 +242,12 @@ class ActorCriticPG:
                 timestep[:, t_idx].unsqueeze(-1).repeat(1, Mtransitions),
                 choose,
             )
+
+            if u_temp.ndim == 1:
+                u_temp = u_temp.unsqueeze(-1)
+            if lp_temp.ndim == 1:
+                lp_temp = lp_temp.unsqueeze(-1)
+            u_t[:, :, t_idx], log_prob_t[:, :, t_idx] = u_temp, lp_temp
 
             # simulate transitions (inner): multiple actions
             (

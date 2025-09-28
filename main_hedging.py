@@ -43,7 +43,8 @@ parser.add_argument("--train", help="Training mode", action="store_true")
 parser.add_argument(
     "--preload", help="Should the existing model be preloaded", action="store_true"
 )
-args = parser.parse_args()
+# args = parser.parse_args()
+args = parser.parse_args(args=["vCJ21", "--train"])
 
 preload = args.preload
 hyperparameters_version = args.hyperparameters
