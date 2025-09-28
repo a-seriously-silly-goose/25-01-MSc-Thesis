@@ -1,0 +1,10 @@
+*** Name of the repository:  vCJ21 ***
+*** Environment parameters:  {'S0': 10, 'K': 10, 'v0': 0.04, 'sigma': 0.2, 'kappa': 9, 'theta': 0.0625, 'eta': 1, 'T': 0.08333333, 'rho': -0.5, 'mu': 0.1, 'r': 0.01, 'B0': 0, 'epsilon': 0, 'max_alpha': 3, 'Ndt': 31} ***
+*** Algorithm parameters:  {'Ntrajectories': 500, 'Mtransitions': 500, 'Nepochs': 400, 'gamma': 1, 'Nepochs_V_init': 1500, 'Nepochs_V': 300, 'lr_V': 0.0005, 'batch_V': 200, 'hidden_V': 16, 'layers_V': 4, 'Nepochs_pi': 10, 'lr_pi': 0.0005, 'batch_pi': 200, 'hidden_pi': 16, 'layers_pi': 3, 'seed': 42, 'clip_epsilon': 0.1, 'gae_lambda': 0.95, 'entropy_coef': 0.01, 'n_critic_updates': 10, 'n_actor_updates': 10} ***
+*** Risk measures parameters:  {'method': 'mean'} ***
+*** Run parameters:  None ***
+*** Risk measures:  ['mean'] ***
+*** alpha_cvar:  [0.2]
+06-02 09:11:58: Training starting...
+--Estimation of V--
+ Epoch = 0,  Loss: 0.0185
