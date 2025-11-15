@@ -13,10 +13,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# misc
-import pdb  # use with set_trace() for the debugger
-
-
 # normalize features of the neural nets
 def normalize_features(x, env):
     # normalize features with environment parameters

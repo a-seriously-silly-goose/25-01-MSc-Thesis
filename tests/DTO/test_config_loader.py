@@ -7,8 +7,8 @@ sys.path.append(str(current_dir)) # noqa E402
 print(current_dir) # noqa E402
 
 
-from DTO.input_dtos import EnvParams
-from DTO.config_loader import load_config
+from dto.input_dtos import EnvParams # noqa E402
+from dto.config_loader import load_config # noqa E402
 
 
 ## test loading config

@@ -9,10 +9,10 @@ print(current_dir) # noqa E402
 
 
 from engines.environments import BlackScholesEnv, HestonEnv # noqa E402
-from DTO.input_dtos import EnvParams
-import torch as T
-import numpy as np
-import pytest
+from dto.input_dtos import EnvParams # noqa E402
+import torch as T # noqa E402
+import numpy as np # noqa E402
+import pytest # noqa E402
 
 # Define a fixture for common environment parameters
 @pytest.fixture

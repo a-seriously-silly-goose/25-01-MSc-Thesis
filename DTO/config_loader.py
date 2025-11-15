@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from DTO.input_dtos import EnvParams, AlgoParams, RiskParams, RunParams
+from dto.input_dtos import EnvParams, AlgoParams, RiskParams
 
 
 def load_config(path: str, version: str):
