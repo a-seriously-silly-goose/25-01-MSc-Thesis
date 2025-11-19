@@ -2,10 +2,12 @@
 Environment Base, Black-Scholes and Heston Implementation
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
 import numpy as np
 import torch as T
 from dto.input_dtos import EnvParams
+import matplotlib.pyplot as plt
+
 
 
 class BaseEnv(ABC):
@@ -18,13 +20,23 @@ class BaseEnv(ABC):
         Initialize the environment with a configuration dictionary.
         """
         self.params = params
-        self.params.dt = self.params.T / self.params.Ndt
-        self.params.sqrt_dt = np.sqrt(self.params.dt)
+        self.S0 = params.S0
+        self.max_alpha = params.max_alpha
+        self.sigma = params.sigma
+        self.mu = params.mu
+        self.v0 = params.v0
+        self.B0 = params.B0
+        self.Ndt = params.Ndt
+        self.dt = self.params.T / self.params.Ndt
+        self.sqrt_dt = np.sqrt(self.dt)
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
+        self.K = params.K
+        self.r = params.r
+        self.T = params.T
 
         # Define discretized state/action spaces
         self.spaces = {
-            "t_space": np.arange(self.params.Ndt + 1) * self.params.dt,
+            "t_space": np.arange(self.params.Ndt + 1) * self.dt,
             "S_space": np.linspace(
                 self.params.S0
                 * np.exp(
@@ -53,7 +65,6 @@ class BaseEnv(ABC):
         Graph the full rollout of the environment (for debugging).
         Simulates the environment from initial reset to expiration and plots the paths.
         """
-        import matplotlib.pyplot as plt
 
         # Initialize the environment
         S_t, v_t, alpha_tm1, B_t = self.reset(Nsims)
@@ -289,7 +300,9 @@ class BlackScholesEnv(BaseEnv):
         v0 = self.params.v0 * T.ones(Nsims, device=self.device)
         alpha_m1 = T.zeros(Nsims, device=self.device)
         B0 = self.params.B0 * T.ones(Nsims, device=self.device)
-        return S0, v0, alpha_m1, B0
+        t0 = T.zeros(Nsims, device=self.device)
+        state_0 = (S0, v0, alpha_m1, B0, t0)
+        return state_0
 
     def random_reset(self, time, Nsims=1):
         if time == self.spaces["t_space"][0]:
@@ -311,19 +324,24 @@ class BlackScholesEnv(BaseEnv):
             size=(Nsims,), device=self.device
         )
 
-        return S0, v0, alpha_m1, B0
+        t0 = time * T.ones(Nsims, device=self.device)
 
-    def step(self, S_t, v_t, alpha_tm1, B_t, alpha_t):
+        state_0 = (S0, v0, alpha_m1, B0, t0)
+
+        return state_0
+
+    def step(self, state_t, alpha_t):
         """
         Simulate one step of the Black-Scholes dynamics.
         """
+        S_t, alpha_tm1, B_t, time_t, v_t = state_t
         Nsims = list(S_t.shape)
 
         # Asset price dynamics
         S_tp1 = S_t * T.exp(
-            (self.params.r - 0.5 * self.params.sigma**2) * self.params.dt
-            + self.params.sigma
-            * self.params.sqrt_dt
+            (self.r - 0.5 * self.sigma**2) * self.dt
+            + self.sigma
+            * self.sqrt_dt
             * T.randn(Nsims, device=self.device)
         )
 
@@ -336,15 +354,19 @@ class BlackScholesEnv(BaseEnv):
             S_t=S_t,
             alpha_tm1=alpha_tm1,
             alpha_t=alpha_t,
-            dt=self.params.dt,
+            dt=self.dt,
             epsilon=self.params.epsilon,
             r=self.params.r,
         )
 
+        time_tp1 = time_t + self.dt
+
         # Wealth and reward
         _, _, reward = compute_wealth(S_t, S_tp1, B_t, B_tp1, alpha_tm1, alpha_t)
 
-        return S_tp1, v_tp1, alpha_t, B_tp1, -reward
+        state_tp1 = (S_tp1, alpha_t, B_tp1, time_tp1, v_tp1)
+
+        return state_tp1, -reward
 
 
 class HestonEnv(BaseEnv):
@@ -363,7 +385,9 @@ class HestonEnv(BaseEnv):
         v0 = self.params.v0 * T.ones(Nsims, device=self.device)
         alpha_m1 = T.zeros(Nsims, device=self.device)
         B0 = self.params.B0 * T.ones(Nsims, device=self.device)
-        return S0, v0, alpha_m1, B0
+        t_0 = T.zeros(Nsims, device=self.device)
+        state_0 = (S0, v0, alpha_m1, B0, t_0)
+        return state_0
 
     def random_reset(self, time, Nsims=1):
         if time == self.spaces["t_space"][0]:
@@ -383,12 +407,16 @@ class HestonEnv(BaseEnv):
         B0 = -(self.params.S0 * alpha_m1) + 0.75 * T.randn(
             size=(Nsims,), device=self.device
         )
-        return S0, v0, alpha_m1, B0
 
-    def step(self, S_t, v_t, alpha_tm1, B_t, alpha_t):
+        t_0 = time * T.ones(Nsims, device=self.device)
+        state_0 = (S0, v0, alpha_m1, B0, t_0)
+        return state_0
+
+    def step(self, state_t, alpha_t):
         """
         Simulate one step of Heston dynamics.
         """
+        S_t, alpha_tm1, B_t, time_t, v_t = state_t
         Nsims = list(S_t.shape)
 
         # Correlated Brownian motions
@@ -404,11 +432,11 @@ class HestonEnv(BaseEnv):
             v_t
             + self.params.kappa
             * (self.params.theta - T.maximum(v_t, T.zeros(1, device=self.device)))
-            * self.params.dt
+            * self.dt
             + self.params.eta
             * T.sqrt(
                 T.maximum(v_t, T.zeros(1, device=self.device))
-                * T.tensor(self.params.dt, device=self.device)
+                * T.tensor(self.dt, device=self.device)
             )
             * W2
         )
@@ -416,10 +444,10 @@ class HestonEnv(BaseEnv):
         # Asset price process
         S_tp1 = S_t * T.exp(
             (self.params.r - 0.5 * T.maximum(v_t, T.zeros(1, device=self.device)))
-            * self.params.dt
+            * self.dt
             + T.sqrt(
                 T.maximum(v_t, T.zeros(1, device=self.device))
-                * T.tensor(self.params.dt, device=self.device)
+                * T.tensor(self.dt, device=self.device)
             )
             * W1
         )
@@ -430,15 +458,17 @@ class HestonEnv(BaseEnv):
             S_t,
             alpha_tm1,
             alpha_t,
-            self.params.dt,
+            self.dt,
             self.params.epsilon,
             self.params.r,
         )
 
         # Wealth and reward
         _, _, reward = compute_wealth(S_t, S_tp1, B_t, B_tp1, alpha_tm1, alpha_t)
+        time_tp1 = time_t + self.dt
+        state_tp1 = (S_tp1, alpha_t, B_tp1, time_tp1, v_tp1)
 
-        return S_tp1, v_tp1, alpha_t, B_tp1, -reward
+        return state_tp1, -reward
 
 
 # Shared helper functions
@@ -463,6 +493,6 @@ def option_price(S, K, type="call", device="cpu"):
         raise ValueError("Invalid option type. Use 'call' or 'put'.")
 
 
-def get_final_cost(S_T, v_T, alpha_Tm1, B_T, epsilon, K):
+def get_final_cost(S_T, alpha_Tm1, epsilon, K):
     r = -T.abs(alpha_Tm1) * epsilon - option_price(S_T, K)
     return -r

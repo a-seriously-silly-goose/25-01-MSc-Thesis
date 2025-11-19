@@ -13,28 +13,31 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from dto.input_dtos import AlgoParams
+from engines.environments import BaseEnv
+
 # normalize features of the neural nets
 def normalize_features(x, env):
     # normalize features with environment parameters
-    x[..., 0] = 2 * x[..., 0] / env.params["S0"] - 1.0  # price
-    x[..., 1] /= env.params["max_alpha"]  # actual hedge position
-    x[..., 2] /= env.params["Ndt"]  # time
+    x[..., 0] = 2 * x[..., 0] / env.S0 - 1.0  # price
+    x[..., 1] /= env.max_alpha  # actual hedge position
+    x[..., 2] /= env.Ndt  # time
 
     return x
 
 
 # build a fully-connected neural net for the policy
-class PolicyApprox(nn.Module):
+class PolicyNN(nn.Module):
     # constructor
-    def __init__(self, input_size, env, n_layers, hidden_size, learn_rate=0.01):
-        super(PolicyApprox, self).__init__()
+    def __init__(self,  input_dto: AlgoParams, env: BaseEnv):
+        super(PolicyNN, self).__init__()
         # input arguments
-        self.input_size = input_size
-        self.output_size = 1
         self.env = env
-        self.n_layers = n_layers
-        self.hidden_size = hidden_size
-        self.learn_rate = learn_rate
+        self.input_size = 4 # TODO: set later
+        self.output_size = 1
+        self.n_layers = input_dto.layers_pi
+        self.hidden_size = input_dto.hidden_pi
+        self.learn_rate = input_dto.lr_pi
 
         # build all layers
         self.layer1 = nn.Linear(self.input_size, self.hidden_size)
@@ -47,12 +50,12 @@ class PolicyApprox(nn.Module):
         self.layerN = nn.Linear(self.hidden_size, self.output_size)
 
         # initializers for weights and biases
-        nn.init.normal_(self.layer1.weight, mean=0, std=1 / np.sqrt(input_size) / 2)
+        nn.init.normal_(self.layer1.weight, mean=0, std=1 / np.sqrt(self.input_size) / 2)
         nn.init.constant_(self.layer1.bias, 0)
         for layer in self.hidden_layers:
-            nn.init.normal_(layer.weight, mean=0, std=1 / np.sqrt(input_size) / 2)
+            nn.init.normal_(layer.weight, mean=0, std=1 / np.sqrt(self.input_size) / 2)
             nn.init.constant_(layer.bias, 0)
-        nn.init.normal_(self.layerN.weight, mean=0, std=1 / np.sqrt(input_size) / 2)
+        nn.init.normal_(self.layerN.weight, mean=0, std=1 / np.sqrt(self.input_size) / 2)
         nn.init.constant_(self.layerN.bias, 0)
 
         # optimizer
@@ -67,9 +70,6 @@ class PolicyApprox(nn.Module):
         # normalize features with environment parameters
         x = normalize_features(x, self.env)
 
-        # mean of the Gaussian policy
-        if x.shape == T.Size([100, 31]):
-            print(" HELLO ")
         loc = F.silu(self.layer1(x.squeeze()))
 
         for layer in self.hidden_layers:
@@ -78,12 +78,12 @@ class PolicyApprox(nn.Module):
         # output layer attempts
         loc = T.clamp(
             self.layerN(loc),
-            min=-self.env.params["max_alpha"],
-            max=self.env.params["max_alpha"],
+            min=-self.env.max_alpha,
+            max=self.env.max_alpha,
         )
 
         # standard deviation of the Gaussian policy
-        scale = 0.03
+        scale = T.tensor(0.03, device=self.device) ## what is this???
 
         return loc, scale
 
