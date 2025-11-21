@@ -7,6 +7,7 @@ from engines.agents.models import PolicyNN
 from engines.environments import BlackScholesEnv, HestonEnv
 from scipy.stats import norm
 import numpy as np
+import math
 from pathlib import Path
 
 
@@ -81,6 +82,12 @@ class BehaviorReplicationAgent:
         batch = T.cat([state[..., :5], delta_t.unsqueeze(-1)], dim=-1)
 
         return batch
+    
+
+
+    def normal_cdf(self,x):
+        return 0.5 * (1.0 + T.erf(x / math.sqrt(2)))
+
 
     def delta_hedge(self, state):
         """
@@ -103,9 +110,8 @@ class BehaviorReplicationAgent:
         r = self.env.r
 
         d1 = (T.log(S_t / K) + (r + 0.5 * v_t ** 2) * T_min_t) / (v_t * T.sqrt(T_min_t))
-        delta = norm.cdf(d1)
-
-        return T.as_tensor(delta, dtype=T.float32, device=self.device)
+        delta = self.normal_cdf(x=d1) 
+        return delta
 
     # Behavior cloning update with Gaussian policy
     def train_behavior_cloning(
