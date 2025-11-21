@@ -106,7 +106,7 @@ class BehaviorReplicationAgent:
                 f"Per sample: {memory_per_sample/1024**2:.2f}MB, "
                 f"Batch size: {max_batch_size}")
             
-            return max(1, min(max_batch_size, 1024))
+            return int(max(1, min(max_batch_size, 1024)))
         else:
             return 32
     
