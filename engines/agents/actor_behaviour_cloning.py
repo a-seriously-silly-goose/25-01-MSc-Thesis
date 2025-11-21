@@ -149,7 +149,7 @@ class BehaviorReplicationAgent:
 
             # 4. compute MLE losses 
             loss = self.get_total_loss(mu, sigma, expert_trajectory[..., 5].squeeze(0), lambda_entropy)
-            loss_history.append(loss.detach().numpy())
+            loss_history.append(loss.detach().cpu().numpy())
 
 
             # 6. backward & step
