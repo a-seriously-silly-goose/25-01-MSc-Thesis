@@ -67,7 +67,7 @@ class BehaviorReplicationAgent:
         mem_before = T.cuda.memory_allocated()
         
         # Forward pass (this will allocate memory for activations)
-        with T.amp.autocast():  # If using mixed precision
+        with T.amp.autocast(device_type=self.device.type):  # If using mixed precision
             mu, sigma = self.policy(dummy_state)
         
         # Optional: backward pass to measure training memory
