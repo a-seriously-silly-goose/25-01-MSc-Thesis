@@ -209,7 +209,7 @@ class BehaviorReplicationAgent:
             for j in range(S_grid.shape[1]):
                 S_t = T.tensor(S_grid[i, j], dtype=T.float32, device=self.device)
                 time_t = T.tensor(t_grid[i, j], dtype=T.float32, device=self.device)
-                obs_t = T.stack((S_t, T.tensor(alpha_fixed), T.zeros_like(S_t), time_t), dim=-1).unsqueeze(
+                obs_t = T.stack((S_t, T.tensor(alpha_fixed, device=self.device), T.zeros_like(S_t), time_t), dim=-1).unsqueeze(
                     0
                 )
 
