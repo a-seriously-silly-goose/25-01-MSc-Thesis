@@ -51,7 +51,7 @@ class BehaviorReplicationAgent:
         # GPU Memory Manager
         self.memory_manager = GPUMemoryManager()
         self.batch_size = self.adaptive_batch_sizing()
-        self.batch_size = 1_000_000
+        self.batch_size = 500  # Fixed batch size for now
 
         
     def measure_memory_per_sample(self):
