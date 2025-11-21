@@ -102,7 +102,7 @@ class BehaviorReplicationAgent:
         T_min_t = self.env.T - time_t
         r = self.env.r
 
-        d1 = (np.log(S_t / K) + (r + 0.5 * v_t ** 2) * T_min_t) / (v_t * np.sqrt(T_min_t))
+        d1 = (T.log(S_t / K) + (r + 0.5 * v_t ** 2) * T_min_t) / (v_t * T.sqrt(T_min_t))
         delta = norm.cdf(d1)
 
         return T.as_tensor(delta, dtype=T.float32, device=self.device)
