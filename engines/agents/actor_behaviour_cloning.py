@@ -47,6 +47,67 @@ class BehaviorReplicationAgent:
 
         os.makedirs(self.repo, exist_ok=True)
         os.makedirs(self.PLOT_DIR, exist_ok=True)
+
+        # GPU Memory Manager
+        self.memory_manager = GPUMemoryManager()
+        self.batch_size = self.adaptive_batch_sizing()
+
+        
+    def measure_memory_per_sample(self):
+        """Measure actual memory usage per sample"""
+        if not T.cuda.is_available():
+            return 1024 * 1024  # Default 1MB if no GPU
+        
+        # Create dummy input with your typical state dimensions
+        # Based on your code: [S_t, alpha_t, B_t, time_t, v_t] = 5 state variables
+        dummy_state = T.randn(1, 5, device=self.device, dtype=T.float32)  # 1 sample
+        
+        # Measure memory before forward pass
+        T.cuda.empty_cache()
+        mem_before = T.cuda.memory_allocated()
+        
+        # Forward pass (this will allocate memory for activations)
+        with T.amp.autocast():  # If using mixed precision
+            mu, sigma = self.policy(dummy_state)
+        
+        # Optional: backward pass to measure training memory
+        loss = mu.sum() + sigma.sum()  # Dummy loss
+        loss.backward()
+        
+        mem_after = T.cuda.memory_allocated()
+        
+        # Memory per sample = total allocated / number of samples
+        memory_per_sample = (mem_after - mem_before)
+        
+        print(f"Measured memory per sample: {memory_per_sample / 1024:.2f} KB")
+        
+        # Clear gradients and cache
+        self.policy.zero_grad()
+        T.cuda.empty_cache()
+        
+        return memory_per_sample
+
+    def adaptive_batch_sizing(self):
+        """Dynamically adjust batch size based on available memory"""
+        if T.cuda.is_available():
+            total_memory = T.cuda.get_device_properties(0).total_memory
+            available_memory = total_memory - T.cuda.memory_allocated()
+            
+            # Measure memory per sample
+            memory_per_sample = self.measure_memory_per_sample()
+            
+            # Add 20% buffer for overhead
+            memory_per_sample_with_buffer = memory_per_sample * 1.2
+            
+            max_batch_size = int(available_memory * 0.8 / memory_per_sample_with_buffer)
+            
+            print(f"Adaptive Batch Sizing: Available {available_memory/1024**3:.2f}GB, "
+                f"Per sample: {memory_per_sample/1024**2:.2f}MB, "
+                f"Batch size: {max_batch_size}")
+            
+            return max(1, min(max_batch_size, 1024))
+        else:
+            return 32
     
     def simulate_delta_hedge_trajectory(self, batch_size: int):
         """Vectorized delta hedge simulation"""
@@ -122,7 +183,6 @@ class BehaviorReplicationAgent:
         lambda_entropy: float,
         batch_size: int,
     ):
-        memory_manager = GPUMemoryManager()
         optimizer = T.optim.Adam(self.policy.parameters(), lr=lr)
         loss_history = []
 
@@ -163,9 +223,9 @@ class BehaviorReplicationAgent:
             loss.backward()
             optimizer.step()
 
-            if epoch % 100 == 0:
-                print(memory_manager.get_memory_info())
-                memory_manager.clear_cache()
+            if epoch % (self.loss_print // 2) == 0:
+                print(self.memory_manager.get_memory_info())
+                self.memory_manager.clear_cache()
 
             # Logging
             if epoch % self.loss_print == 0 or epoch == epochs - 1:

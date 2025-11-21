@@ -14,7 +14,7 @@ from engines.agents.models import PolicyNN
 from dto.input_dtos import EnvParams
 from engines.agents.actor_behaviour_cloning import BehaviorReplicationAgent
 from dto.config_loader import load_config
-from engines.gpu_manager import setup_gpu_optimizations, adaptive_batch_sizing
+from engines.gpu_manager import setup_gpu_optimizations
 
 def debug_delta_hedge_trajectory():
     """
@@ -93,13 +93,12 @@ def debug_BC_train():
     )
 
     # Train the agent using expert trajectories
-    batch_size = adaptive_batch_sizing()
     agent.train_behavior_cloning(
         epochs=10_000, 
         lr=1e-2, 
         lambda_entropy=0.01,
-        batch_size=batch_size)
-
+        batch_size=agent.batch_size)
+    
 if __name__ == "__main__":
 
     # debug_delta_hedge_trajectory()
