@@ -330,43 +330,28 @@ class BlackScholesEnv(BaseEnv):
 
         return state_0
 
+    
     def step(self, state_t, alpha_t):
-        """
-        Simulate one step of the Black-Scholes dynamics.
-        """
+        """Optimized step function with precomputed factors"""
         S_t, alpha_tm1, B_t, time_t, v_t = state_t
-        Nsims = list(S_t.shape)
-
-        # Asset price dynamics
-        S_tp1 = S_t * T.exp(
-            (self.r - 0.5 * self.sigma**2) * self.dt
-            + self.sigma
-            * self.sqrt_dt
-            * T.randn(Nsims, device=self.device)
-        )
-
-        # Volatility stays constant
-        v_tp1 = v_t
-
-        # Bank account update
-        B_tp1 = update_bank_account(
-            B_t=B_t,
-            S_t=S_t,
-            alpha_tm1=alpha_tm1,
-            alpha_t=alpha_t,
-            dt=self.dt,
-            epsilon=self.params.epsilon,
-            r=self.params.r,
-        )
-
+        
+        # Vectorized price update
+        rand_norm = T.randn(S_t.shape, device=self.device, dtype=T.float32)
+        S_tp1 = S_t * T.exp(self.drift_factor + self.vol_factor * rand_norm)
+        
+        # Optimized bank account update
+        alpha_diff = alpha_t - alpha_tm1
+        B_tp1 = (B_t - alpha_diff * S_t - T.abs(alpha_diff) * self.params.epsilon)
+        B_tp1 = B_tp1 * T.exp(T.tensor(self.r * self.dt, device=self.device))
+        
+        # In-place operations where possible
         time_tp1 = time_t + self.dt
-
-        # Wealth and reward
+        
+        # Efficient reward computation
         _, _, reward = compute_wealth(S_t, S_tp1, B_t, B_tp1, alpha_tm1, alpha_t)
 
-        state_tp1 = (S_tp1, alpha_t, B_tp1, time_tp1, v_tp1)
-
-        return state_tp1, -reward
+        
+        return (S_tp1, alpha_t, B_tp1, time_tp1, v_t), -reward
 
 
 class HestonEnv(BaseEnv):

@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 from torch.nn.functional import silu
 from engines.agents.models import PolicyNN
 from engines.environments import BlackScholesEnv, HestonEnv
+from engines.gpu_manager import GPUMemoryManager
 from scipy.stats import norm
 import numpy as np
 import math
 from pathlib import Path
+from datetime import datetime
 
 
 class BehaviorReplicationAgent:
@@ -30,57 +32,56 @@ class BehaviorReplicationAgent:
         self.hyperparameters_version = hyperparameters_version
         self.loss_print = 100  # Print loss every n epochs
 
-        # Repository path
-        self.repo = root_repo
-
         # Determine device
         self.device = T.device("cuda" if T.cuda.is_available() else "cpu")
+        self.policy.to(self.device)
+
+        # Repository path
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        self.repo = os.path.join(root_repo, "runs", f"{self.hyperparameters_version}_BC_{timestamp}")
 
         # Paths for saving files
-        self.LOG_FILE = os.path.join(
-            self.repo, f"BC_log_{self.hyperparameters_version}.txt"
-        )
+        self.LOG_FILE = os.path.join(self.repo, "log.txt")
+        self.PI_MODEL_FILE = os.path.join(self.repo, "PI_model.pt")
+        self.PLOT_DIR = os.path.join(self.repo, "plots")
 
-        self.PI_MODEL_FILE = os.path.join(
-            self.repo, f"PI_BC_{self.hyperparameters_version}.pt"
-        )
-
-        self.PLOT_DIR = os.path.join(self.repo, "BC", "plots")
+        os.makedirs(self.repo, exist_ok=True)
         os.makedirs(self.PLOT_DIR, exist_ok=True)
-
+    
     def simulate_delta_hedge_trajectory(self, batch_size: int):
-        """
-        Simulate a batch of trajectories using the Delta Hedge actor.
-
-        Parameters:
-        - batch_size: Number of trajectories to simulate.
-
-        Returns:
-        - batch: A tensor of trajectories with shape 
-                 (batch_size, trajectory_length, state_dim + 1), where the last dimension
-                 includes (S_t, v_t, alpha_t, B_t, time_t, delta_t).
-        """
-        # Create meshgrid for stock prices and time
-        S_vals = T.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, batch_size, device=self.device)
-        t_vals = T.linspace(0, self.env.T, self.env.Ndt, device=self.device)
+        """Vectorized delta hedge simulation"""
+        # Use larger but fewer batches to reduce overhead
+        S_vals = T.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, batch_size, 
+                           device=self.device, dtype=T.float32)
+        t_vals = T.linspace(0, self.env.T, self.env.Ndt, 
+                           device=self.device, dtype=T.float32)
+        
         S_grid, t_grid = T.meshgrid(S_vals, t_vals, indexing="ij")
-
-        # Randomly sample alpha_t and B_t
-        alpha_t = T.rand(S_grid.shape, device=self.device)
-        B_t = T.rand(S_grid.shape, device=self.device)
-
-        # Volatility is constant in this environment
-        v_t = T.full(S_grid.shape, self.env.sigma, device=self.device)
-
-        # Stack the state components
-        state = T.stack([S_grid, alpha_t, B_t, t_grid,  v_t], dim=-1)
-
-        # Compute delta hedge for all states
-        delta_t = self.delta_hedge(state.view(-1, state.shape[-1])).view(state.shape[:-1])
-
-        # Add delta_t to the state tensor
-        batch = T.cat([state[..., :5], delta_t.unsqueeze(-1)], dim=-1)
-
+        
+        # Use float32 to save memory
+        alpha_t = T.rand(S_grid.shape, device=self.device, dtype=T.float32)
+        B_t = T.rand(S_grid.shape, device=self.device, dtype=T.float32)
+        v_t = T.full(S_grid.shape, self.env.sigma, device=self.device, dtype=T.float32)
+        
+        # Flatten for batch processing
+        flat_states = T.stack([
+            S_grid.flatten(), 
+            alpha_t.flatten(), 
+            B_t.flatten(), 
+            t_grid.flatten(), 
+            v_t.flatten()
+        ], dim=-1)
+        
+        # Vectorized delta computation
+        with T.no_grad():
+            deltas = self.delta_hedge(flat_states)
+        
+        # Reshape back
+        batch = T.cat([
+            flat_states.reshape(*S_grid.shape, -1),
+            deltas.reshape(*S_grid.shape, 1)
+        ], dim=-1)
+        
         return batch
     
 
@@ -119,79 +120,102 @@ class BehaviorReplicationAgent:
         epochs: int,
         lr: float,
         lambda_entropy: float,
-        batch_size: int ,
+        batch_size: int,
     ):
-        """
-        This follows Algo 2 from the paper
-        """
+        memory_manager = GPUMemoryManager()
         optimizer = T.optim.Adam(self.policy.parameters(), lr=lr)
         loss_history = []
 
         self.policy.train()
 
-        msg = f"Starting Behavior Cloning training for {epochs} epochs..."
-        print(msg)
-        with open(self.LOG_FILE, "a") as f:
-            f.write(msg + "\n")
-
+        print(f"Starting Behavior Cloning training for {epochs} epochs...")
+        
         for epoch in range(epochs):
             optimizer.zero_grad()
 
-            # 2. simulate full expert trajectory
+            # Simulate expert trajectory
             with T.no_grad():
-                expert_trajectory = self.simulate_delta_hedge_trajectory(
-                    batch_size=batch_size
-                )  # shape: [1, T, state_dim + 1]
+                expert_trajectory = self.simulate_delta_hedge_trajectory(batch_size=batch_size)
 
-            # 3. get actor outcome on the trajectory
-            mu, sigma = self.policy.forward(
-                expert_trajectory[..., :4].squeeze(0))  # shape: [T, 1]
-
-            # 4. compute MLE losses 
-            loss = self.get_total_loss(mu, sigma, expert_trajectory[..., 5].squeeze(0), lambda_entropy)
+            # Extract states and actions - CORRECTED dimensions
+            states = expert_trajectory[..., :4]  # All 5 state variables
+            expert_actions = expert_trajectory[..., 5]  # Delta at index 5
+            
+            # Get batch dimensions
+            batch_size_dim, time_steps, state_dim = states.shape
+            
+            # Reshape for batch processing
+            states_flat = states.reshape(-1, state_dim)
+            expert_actions_flat = expert_actions.reshape(-1)
+            
+            # Forward pass
+            mu, sigma = self.policy(states_flat)
+            
+            # Ensure proper shapes
+            mu = mu.squeeze(-1)  # [batch*time, 1] -> [batch*time]
+            sigma = sigma.squeeze(-1)  # [batch*time, 1] -> [batch*time]
+            
+            # Compute loss
+            loss = self.get_total_loss(mu, sigma, expert_actions_flat, lambda_entropy)
             loss_history.append(loss.detach().cpu().numpy())
 
-
-            # 6. backward & step
+            # Backward pass
             loss.backward()
             optimizer.step()
 
-            optimizer.step()
+            if epoch % 100 == 0:
+                print(memory_manager.get_memory_info())
+                memory_manager.clear_cache()
 
-            # logging + plotting every 10 epochs
+            # Logging
             if epoch % self.loss_print == 0 or epoch == epochs - 1:
-                msg = f"[BC] Epoch {epoch}/{epochs} — Loss={loss.item():.5f}"
-                print(msg)
-                with open(self.LOG_FILE, "a") as f:
-                    f.write(msg + "\n")
+                print(f"[BC] Epoch {epoch}/{epochs} — Loss={loss.item():.5f}")
                 self.plot_current_policy(epoch)
                 self.plot_action_vs_price()
                 self.plot_action_vs_time()
                 self.save_policy()
 
-            self.policy.eval()
+        self.policy.eval()
+        return loss_history
+
+    # def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
+    #     """
+    #     Compute the total loss for behavior cloning.
+
+    #     Parameters:
+    #     - mu: Mean actions predicted by the policy.
+    #     - sigma: Standard deviation of actions predicted by the policy.
+    #     - expert_actions: Actions taken by the expert (Delta Hedge).
+
+    #     Returns:
+    #     - total_loss: The combined loss from MLE and entropy.
+    #     """
+    #     # Maximum Likelihood Estimation (MLE) Loss
+    #     expert_actions = expert_actions.view_as(mu)  # Ensure dimensions match
+    #     MLE_loss = 0.5 * T.mean(((expert_actions - mu) / sigma) ** 2 + 2 * T.log(sigma) + T.log(T.tensor(2) * T.pi))
+        
+    #     Entropy_loss = 0.5 *T.mean(T.log(sigma**2 * 2 * T.pi * T.e))
+
+    #     total_loss = MLE_loss - lambda_entropy * Entropy_loss  # Combine losses with entropy regularization
+    #     return total_loss
 
     def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
         """
-        Compute the total loss for behavior cloning.
-
-        Parameters:
-        - mu: Mean actions predicted by the policy.
-        - sigma: Standard deviation of actions predicted by the policy.
-        - expert_actions: Actions taken by the expert (Delta Hedge).
-
-        Returns:
-        - total_loss: The combined loss from MLE and entropy.
+        Compute loss using PyTorch's Normal distribution for better numerical stability.
         """
-        # Maximum Likelihood Estimation (MLE) Loss
-        expert_actions = expert_actions.view_as(mu)  # Ensure dimensions match
-        MLE_loss = 0.5 * T.mean(((expert_actions - mu) / sigma) ** 2 + 2 * T.log(sigma) + T.log(T.tensor(2) * T.pi))
+        expert_actions = expert_actions.view_as(mu)
         
-        Entropy_loss = 0.5 *T.mean(T.log(sigma**2 * 2 * T.pi * T.e))
-
-        total_loss = MLE_loss - lambda_entropy * Entropy_loss  # Combine losses with entropy regularization
+        # Create normal distribution
+        dist = T.distributions.Normal(mu, sigma)
+        
+        # Negative log likelihood loss
+        nll_loss = -dist.log_prob(expert_actions).mean()
+        
+        # Entropy regularization (encourages exploration)
+        entropy = dist.entropy().mean()
+        
+        total_loss = nll_loss - lambda_entropy * entropy
         return total_loss
-
 
     def plot_current_policy(self, epoch):
         """
