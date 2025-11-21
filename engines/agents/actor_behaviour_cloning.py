@@ -145,8 +145,6 @@ class BehaviorReplicationAgent:
         
         return batch
     
-
-
     def normal_cdf(self,x):
         return 0.5 * (1.0 + T.erf(x / math.sqrt(2)))
 
@@ -238,44 +236,44 @@ class BehaviorReplicationAgent:
         self.policy.eval()
         return loss_history
 
-    # def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
-    #     """
-    #     Compute the total loss for behavior cloning.
-
-    #     Parameters:
-    #     - mu: Mean actions predicted by the policy.
-    #     - sigma: Standard deviation of actions predicted by the policy.
-    #     - expert_actions: Actions taken by the expert (Delta Hedge).
-
-    #     Returns:
-    #     - total_loss: The combined loss from MLE and entropy.
-    #     """
-    #     # Maximum Likelihood Estimation (MLE) Loss
-    #     expert_actions = expert_actions.view_as(mu)  # Ensure dimensions match
-    #     MLE_loss = 0.5 * T.mean(((expert_actions - mu) / sigma) ** 2 + 2 * T.log(sigma) + T.log(T.tensor(2) * T.pi))
-        
-    #     Entropy_loss = 0.5 *T.mean(T.log(sigma**2 * 2 * T.pi * T.e))
-
-    #     total_loss = MLE_loss - lambda_entropy * Entropy_loss  # Combine losses with entropy regularization
-    #     return total_loss
-
     def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
         """
-        Compute loss using PyTorch's Normal distribution for better numerical stability.
+        Compute the total loss for behavior cloning.
+
+        Parameters:
+        - mu: Mean actions predicted by the policy.
+        - sigma: Standard deviation of actions predicted by the policy.
+        - expert_actions: Actions taken by the expert (Delta Hedge).
+
+        Returns:
+        - total_loss: The combined loss from MLE and entropy.
         """
-        expert_actions = expert_actions.view_as(mu)
+        # Maximum Likelihood Estimation (MLE) Loss
+        expert_actions = expert_actions.view_as(mu)  # Ensure dimensions match
+        MLE_loss = 0.5 * T.mean(((expert_actions - mu) / sigma) ** 2 + 2 * T.log(sigma) + T.log(T.tensor(2) * T.pi))
         
-        # Create normal distribution
-        dist = T.distributions.Normal(mu, sigma)
-        
-        # Negative log likelihood loss
-        nll_loss = -dist.log_prob(expert_actions).mean()
-        
-        # Entropy regularization (encourages exploration)
-        entropy = dist.entropy().mean()
-        
-        total_loss = nll_loss - lambda_entropy * entropy
+        Entropy_loss = 0.5 *T.mean(T.log(sigma**2 * 2 * T.pi * T.e))
+
+        total_loss = MLE_loss - lambda_entropy * Entropy_loss  # Combine losses with entropy regularization
         return total_loss
+
+    # def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
+    #     """
+    #     Compute loss using PyTorch's Normal distribution for better numerical stability.
+    #     """
+    #     expert_actions = expert_actions.view_as(mu)
+        
+    #     # Create normal distribution
+    #     dist = T.distributions.Normal(mu, sigma)
+        
+    #     # Negative log likelihood loss
+    #     nll_loss = -dist.log_prob(expert_actions).mean()
+        
+    #     # Entropy regularization (encourages exploration)
+    #     entropy = dist.entropy().mean()
+        
+    #     total_loss = nll_loss - lambda_entropy * entropy
+    #     return total_loss
 
     def plot_current_policy(self, epoch):
         """
