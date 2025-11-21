@@ -247,7 +247,7 @@ class BehaviorReplicationAgent:
         for S in S_values:
             S_t = T.tensor(S, dtype=T.float32, device=self.device)
             time_t = T.tensor(time_fixed, dtype=T.float32, device=self.device)
-            obs_t = T.stack((S_t, T.tensor(0.0), T.tensor(0.0), time_t), dim=-1).unsqueeze(0)
+            obs_t = T.stack((S_t, T.tensor(0.0, device=self.device), T.tensor(0.0, device=self.device), time_t), dim=-1).unsqueeze(0)
 
             with T.no_grad():
                 action, _ = self.policy(obs_t)
@@ -285,7 +285,7 @@ class BehaviorReplicationAgent:
         for time in time_values:
             S_t = T.tensor(stock_price_fixed, dtype=T.float32, device=self.device)
             time_t = T.tensor(time, dtype=T.float32, device=self.device)
-            obs_t = T.stack((S_t, T.tensor(0.0), T.tensor(0.0), time_t), dim=-1).unsqueeze(0)
+            obs_t = T.stack((S_t, T.tensor(0.0, device=self.device), T.tensor(0.0, device=self.device), time_t), dim=-1).unsqueeze(0)
 
             with T.no_grad():
                 action, _ = self.policy(obs_t)
