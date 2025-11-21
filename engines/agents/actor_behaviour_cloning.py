@@ -51,6 +51,7 @@ class BehaviorReplicationAgent:
         # GPU Memory Manager
         self.memory_manager = GPUMemoryManager()
         self.batch_size = self.adaptive_batch_sizing()
+        self.batch_size = 32
 
         
     def measure_memory_per_sample(self):
@@ -99,7 +100,7 @@ class BehaviorReplicationAgent:
             # Add 20% buffer for overhead
             memory_per_sample_with_buffer = memory_per_sample * 1.2
             
-            max_batch_size = int(available_memory * 0.8 / memory_per_sample_with_buffer)
+            max_batch_size = int(available_memory * 0.7 / memory_per_sample_with_buffer)
             
             print(f"Adaptive Batch Sizing: Available {available_memory/1024**3:.2f}GB, "
                 f"Per sample: {memory_per_sample/1024**2:.2f}MB, "
@@ -228,6 +229,8 @@ class BehaviorReplicationAgent:
             # Logging
             if epoch % self.loss_print == 0 or epoch == epochs - 1:
                 print(f"[BC] Epoch {epoch}/{epochs} — Loss={loss.item():.5f}")
+                with open(self.LOG_FILE, "a") as log_f:
+                    log_f.write(f"{epoch},{loss.item():.5f}\n")
                 self.plot_current_policy(epoch)
                 self.plot_action_vs_price()
                 self.plot_action_vs_time()
