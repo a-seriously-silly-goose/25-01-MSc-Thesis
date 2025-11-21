@@ -59,8 +59,8 @@ class BehaviorReplicationAgent:
             return 1024 * 1024  # Default 1MB if no GPU
         
         # Create dummy input with your typical state dimensions
-        # Based on your code: [S_t, alpha_t, B_t, time_t, v_t] = 5 state variables
-        dummy_state = T.randn(1, 5, device=self.device, dtype=T.float32)  # 1 sample
+        # Based on your code: [S_t, alpha_t, B_t, time_t] = 5 state variables
+        dummy_state = T.randn(1, 4, device=self.device, dtype=T.float32)  # 1 sample
         
         # Measure memory before forward pass
         T.cuda.empty_cache()
