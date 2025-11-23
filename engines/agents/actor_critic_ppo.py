@@ -115,7 +115,7 @@ class ActorCriticPPO:
             obs = T.stack([S_t, alpha_tm1, B_t, t_norm], dim=-1)  # shape [B, state_dim=3]
 
             with T.no_grad():
-                mu, sigma = self.policy(obs)
+                mu, sigma = self.policy.forward(obs)
                 dist = T.distributions.Normal(mu, sigma)
                 action = dist.rsample().squeeze(-1)  # rsample for reparam if needed; use sample() if not
                 log_prob = dist.log_prob(action)[0]
@@ -340,7 +340,7 @@ class ActorCriticPPO:
                         continue
 
                     # Evaluate policy on batch
-                    mu, sigma = self.policy(batch_states)
+                    mu, sigma = self.policy.forward(batch_states)
                                     # Add NaN check for policy outputs
                     if T.isnan(mu).any() or T.isnan(sigma).any():
                         self.log_message("CRITICAL: Policy outputting NaN values!")
