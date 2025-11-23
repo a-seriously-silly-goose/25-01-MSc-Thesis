@@ -2,14 +2,10 @@ import torch as T
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from torch.nn.functional import silu
 from engines.agents.models import PolicyNN
-from engines.environments import BlackScholesEnv, HestonEnv
+from engines.environments import BlackScholesEnv
 from engines.gpu_manager import GPUMemoryManager
-from scipy.stats import norm
-import numpy as np
 import math
-from pathlib import Path
 from datetime import datetime
 
 
@@ -18,6 +14,7 @@ class BehaviorReplicationAgent:
         self,
         env: BlackScholesEnv,  # The environment object
         policy_net: PolicyNN ,  # Policy Neural Network structure (like PG/PPO)
+        algoParams: dict,  # Algorithm parameters
         hyperparameters_version: str,  # The version of the hyperparameters
         root_repo: str ,  # Root repository path
     ):
@@ -35,6 +32,9 @@ class BehaviorReplicationAgent:
         # Determine device
         self.device = T.device("cuda" if T.cuda.is_available() else "cpu")
         self.policy.to(self.device)
+
+        # Load hyperparameters
+        self.policy_optim = T.optim.Adam(self.policy.parameters(), lr=algoParams["lr_pi"])
 
         # Repository path
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
@@ -178,11 +178,9 @@ class BehaviorReplicationAgent:
     def train_behavior_cloning(
         self,
         epochs: int,
-        lr: float,
         lambda_entropy: float,
         batch_size: int,
     ):
-        optimizer = T.optim.Adam(self.policy.parameters(), lr=lr)
         loss_history = []
 
         self.policy.train()
@@ -190,7 +188,7 @@ class BehaviorReplicationAgent:
         print(f"Starting Behavior Cloning training for {epochs} epochs...")
         
         for epoch in range(epochs):
-            optimizer.zero_grad()
+            self.policy_optim.zero_grad()
 
             # Simulate expert trajectory
             with T.no_grad():
@@ -220,7 +218,7 @@ class BehaviorReplicationAgent:
 
             # Backward pass
             loss.backward()
-            optimizer.step()
+            self.policy_optim.step()
 
             if epoch % (self.loss_print // 2) == 0:
                 print(self.memory_manager.get_memory_info())

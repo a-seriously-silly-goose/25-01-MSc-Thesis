@@ -154,7 +154,7 @@ class BaseEnv(ABC):
         # Rollout until expiration
         for t in range(self.params.Ndt):
             alpha_t = T.zeros_like(alpha_tm1, device=self.device)  # Example: no trading
-            S_t, v_t, alpha_tm1, B_t, _ = self.step(S_t, v_t, alpha_tm1, B_t, alpha_t)
+            S_t, alpha_tm1, B_t, t, v_t = self.step(S_t, alpha_tm1, B_t, t, v_t, alpha_t)
             S_paths.append(S_t.cpu().numpy())
             v_paths.append(v_t.cpu().numpy())
             B_paths.append(B_t.cpu().numpy())
@@ -226,14 +226,16 @@ class BaseEnv(ABC):
         v_paths = []
         B_paths = []
         alpha_paths = []
+        t_paths = []
 
         for time in times:
             # Randomly reset the environment at the given time
-            S_t, v_t, alpha_tm1, B_t = self.random_reset(time, Nsims)
+            S_t, alpha_tm1, B_t, t, v_t = self.random_reset(time, Nsims)
             S_paths.append(S_t.cpu().numpy())
             v_paths.append(v_t.cpu().numpy())
             B_paths.append(B_t.cpu().numpy())
             alpha_paths.append(alpha_tm1.cpu().numpy())
+            t_paths.append(t.cpu().numpy())
 
         # Convert paths to numpy arrays for plotting
         S_paths = np.array(S_paths)
@@ -301,7 +303,7 @@ class BlackScholesEnv(BaseEnv):
         alpha_m1 = T.zeros(Nsims, device=self.device)
         B0 = self.params.B0 * T.ones(Nsims, device=self.device)
         t0 = T.zeros(Nsims, device=self.device)
-        state_0 = (S0, v0, alpha_m1, B0, t0)
+        state_0 = (S0, alpha_m1, B0, t0, v0)
         return state_0
 
     def random_reset(self, time, Nsims=1):
@@ -371,7 +373,7 @@ class HestonEnv(BaseEnv):
         alpha_m1 = T.zeros(Nsims, device=self.device)
         B0 = self.params.B0 * T.ones(Nsims, device=self.device)
         t_0 = T.zeros(Nsims, device=self.device)
-        state_0 = (S0, v0, alpha_m1, B0, t_0)
+        state_0 = (S0, alpha_m1, B0, t_0, v0)
         return state_0
 
     def random_reset(self, time, Nsims=1):
@@ -394,7 +396,7 @@ class HestonEnv(BaseEnv):
         )
 
         t_0 = time * T.ones(Nsims, device=self.device)
-        state_0 = (S0, v0, alpha_m1, B0, t_0)
+        state_0 = (S0, alpha_m1, B0, t_0, v0)
         return state_0
 
     def step(self, state_t, alpha_t):
@@ -454,6 +456,13 @@ class HestonEnv(BaseEnv):
         state_tp1 = (S_tp1, alpha_t, B_tp1, time_tp1, v_tp1)
 
         return state_tp1, -reward
+    
+    def get_final_QHE(self, S_T, alpha_Tm1, B_T):
+        """
+        Compute Quadratic Hedging Error at option expiration.
+        """
+        hedging_error = (B_T - T.abs(alpha_Tm1) * self.params.epsilon - option_price(S_T, self.params.K))**2
+        return hedging_error
 
 
 # Shared helper functions

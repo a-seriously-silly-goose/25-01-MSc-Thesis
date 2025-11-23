@@ -22,10 +22,10 @@ v_debug:
   algoParams:
    # note: the next two must match!
     Ntrajectories : 50 # number of generated trajectories
-    Mtransitions : 50 # number of additional transitions for each state
+    Mtransitions : 5 # number of additional transitions for each state
     Nepochs : 4 # number of epochs of the whole algorithm
     gamma : 1 # discount factor
-    Nepochs_V_init : 15 # number of epochs for the estimation of V during the first epoch
+    Nepochs_V_init : 10 # number of epochs for the estimation of V during the first epoch
     Nepochs_V : 3 # number of epochs for the estimation of V
     lr_V : .0005 # learning rate of the neural net associated with V
     batch_V : 20 # number of trajectories for each mini-batch in estimating V
