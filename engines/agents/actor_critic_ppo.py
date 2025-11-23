@@ -5,6 +5,8 @@ from datetime import datetime
 from engines.agents.models import PolicyNN, CriticNN
 from engines.environments import HestonEnv
 from engines.gpu_manager import GPUMemoryManager
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 class ActorCriticPPO:
@@ -34,7 +36,7 @@ class ActorCriticPPO:
         self.policy = policy_net
         self.value_net = value_net
         self.hyperparameters_version = hyperparameters_version
-        self.loss_print = 100  # Print loss every n epochs
+        self.loss_print = 2  # Print loss every n epochs
 
         # Determine device
         self.device = T.device("cuda" if T.cuda.is_available() else "cpu")
@@ -446,15 +448,134 @@ class ActorCriticPPO:
                 self.log_message(f"[PPO] PPO Epoch {epoch+1}/{K_PPO} | "
                                 f"Critic losses (last): {critic_info.get('value_loss_hist', [])[-1] if critic_info.get('value_loss_hist') else None} | "
                                 f"Actor loss (last): {actor_info.get('policy_loss_hist', [])[-1] if actor_info.get('policy_loss_hist') else None}")
+                self.plot_current_policy(epoch+1)
+                self.plot_action_vs_price(epoch+1)
+
 
         return {"policy_loss": all_policy_losses, "value_loss": all_value_losses}
 
+    def plot_current_policy(self, epoch):
+        """
+        Plot the current policy learned by the agent.
+        """
+        S_vals = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
+        t_vals = np.linspace(0, self.env.T, 50)
+        S_grid, t_grid = np.meshgrid(S_vals, t_vals)
+        v_fixed = self.env.sigma
+        alpha_fixed = 0.0
+        B_fixed = self.env.B0
+
+        deltas = np.zeros_like(S_grid)
+        for i in range(S_grid.shape[0]):
+            for j in range(S_grid.shape[1]):
+                S_t = T.tensor(S_grid[i, j], dtype=T.float32, device=self.device)
+                time_t = T.tensor(t_grid[i, j], dtype=T.float32, device=self.device)
+                obs_t = T.stack((S_t, T.tensor(alpha_fixed, device=self.device), T.zeros_like(S_t), time_t), dim=-1).unsqueeze(
+                    0
+                )
+
+                with T.no_grad():
+                    predicted_action, _ = self.policy.forward(obs_t)
+
+                deltas[i, j] = predicted_action.cpu().item()
+
+        plt.figure(figsize=(10, 6))
+        contour = plt.contourf(S_grid, t_grid, deltas, cmap="viridis")
+        plt.colorbar(contour, label="Replicated Delta")
+        plt.xlabel("Stock Price")
+        plt.ylabel("Time to Maturity")
+        plt.title(f"Replicated Delta: Epoch {epoch}")
+        plot_file = os.path.join(self.PLOT_DIR, f"current_policy.png")
+        print(f"Saving policy plot to {plot_file}")
+        plt.savefig(plot_file)
+        plt.close()
+
+    
+    def plot_action_vs_price(self, time_fixed=None):
+        """
+        Plot the action (output of the policy) against stock price.
+        This assumes a fixed time for the plot.
+
+        Parameters:
+        - time_fixed: The fixed time for plotting, defaults to the mid-point of `env.T` if None.
+        """
+        if time_fixed is None:
+            time_fixed = self.env.T / 2  # Use the mid-point of the time horizon
+
+        # Grid for Stock Prices
+        S_values = np.linspace(0.5 * self.env.S0, 1.5 * self.env.S0, 100)
+        actions = []
+
+        for S in S_values:
+            S_t = T.tensor(S, dtype=T.float32, device=self.device)
+            time_t = T.tensor(time_fixed, dtype=T.float32, device=self.device)
+            obs_t = T.stack((S_t, T.tensor(0.0, device=self.device), T.tensor(0.0, device=self.device), time_t), dim=-1).unsqueeze(0)
+
+            with T.no_grad():
+                action, _ = self.policy(obs_t)
+                actions.append(action.item())
+
+        # Plotting
+        plt.figure(figsize=(10, 6))
+        plt.plot(S_values, actions, label=f"Time (t) = {time_fixed:.2f}")
+        plt.xlabel("Stock Price")
+        plt.ylabel("Action (Hedge Position)")
+        plt.title("Action vs Stock Price")
+        plt.legend()
+        plt.grid(True)
+
+        # Save the plot
+        plot_file = os.path.join(self.PLOT_DIR, "action_vs_price.png")
+        plt.savefig(plot_file)
+        plt.close()
+
+    def plot_action_vs_time(self, stock_price_fixed=None):
+        """
+        Plot the action (output of the policy) against time.
+        This assumes a fixed stock price for the plot.
+
+        Parameters:
+        - stock_price_fixed: The fixed stock price for plotting, defaults to `env.S0` if None.
+        """
+        if stock_price_fixed is None:
+            stock_price_fixed = self.env.S0  # Use the initial stock price
+
+        # Time values for plotting
+        time_values = np.linspace(0, self.env.T, 50)
+        actions = []
+
+        for time in time_values:
+            S_t = T.tensor(stock_price_fixed, dtype=T.float32, device=self.device)
+            time_t = T.tensor(time, dtype=T.float32, device=self.device)
+            obs_t = T.stack((S_t, T.tensor(0.0, device=self.device), T.tensor(0.0, device=self.device), time_t), dim=-1).unsqueeze(0)
+
+            with T.no_grad():
+                action, _ = self.policy(obs_t)
+                actions.append(action.item())
+
+        # Plotting
+        plt.figure(figsize=(10, 6))
+        plt.plot(
+            time_values,
+            actions,
+            label=f"Stock Price (S) = {stock_price_fixed:.2f}",
+        )
+        plt.xlabel("Time")
+        plt.ylabel("Action (Hedge Position)")
+        plt.title("Action vs Time")
+        plt.legend()
+        plt.grid(True)
+
+        # Save the plot
+        plot_file = os.path.join(self.PLOT_DIR, "action_vs_time.png")
+        plt.savefig(plot_file)
+        plt.close()
 
     def save_models(self, save_dir):
         """Save policy and value networks"""
         os.makedirs(save_dir, exist_ok=True)
-        T.save(self.policy.state_dict(), os.path.join(save_dir))
-        T.save(self.value_net.state_dict(), os.path.join(save_dir))
+        T.save(self.policy.state_dict(), self.PI_MODEL_FILE)
+        T.save(self.value_net.state_dict(), self.V_MODEL_FILE)
         self.log_message(f"Models saved to {save_dir}")
 
     def load_models(self, load_dir):

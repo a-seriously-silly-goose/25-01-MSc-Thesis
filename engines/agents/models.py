@@ -3,9 +3,6 @@ Models -- Neural Networks
 Policy and value function with fully-connected ANNs
 
 """
-
-# numpy
-
 # pytorch
 import torch as T
 import torch.nn as nn
