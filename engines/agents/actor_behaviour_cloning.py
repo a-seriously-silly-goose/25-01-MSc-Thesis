@@ -34,7 +34,7 @@ class BehaviorReplicationAgent:
         self.policy.to(self.device)
 
         # Load hyperparameters
-        self.policy_optim = T.optim.Adam(self.policy.parameters(), lr=algoParams["lr_pi"])
+        self.policy_optim = T.optim.Adam(self.policy.parameters(), lr=algoParams.lr_pi)
 
         # Repository path
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")

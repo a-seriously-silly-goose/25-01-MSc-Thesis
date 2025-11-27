@@ -7,6 +7,10 @@ import numpy as np
 import torch as T
 from dto.input_dtos import EnvParams
 import matplotlib.pyplot as plt
+import cmath
+from math import log, exp, pi
+from scipy import integrate
+
 
 
 
@@ -363,7 +367,19 @@ class HestonEnv(BaseEnv):
 
     def __init__(self, params: EnvParams):
         super().__init__(params)
-
+        price, error = mc_heston_put(
+                    S0=self.params.S0,
+                    K=self.params.K,
+                    T=self.params.T,
+                    r=self.params.r,
+                    q=getattr(self.params, "q", 0.0),
+                    kappa=self.params.kappa,
+                    theta=self.params.theta,
+                    sigma=self.params.eta,
+                    rho=self.params.rho,
+                    v0=self.params.v0,
+                )
+        self.params.B0 = price
         # Add v_space to spaces to account for stochastic volatility
         self.spaces["v_space"] = np.linspace(0, 2 * self.params.v0, self.params.Ndt + 1)
 
@@ -490,3 +506,55 @@ def option_price(S, K, type="call", device="cpu"):
 def get_final_cost(S_T, alpha_Tm1, epsilon, K):
     r = -T.abs(alpha_Tm1) * epsilon - option_price(S_T, K)
     return -r
+
+
+"""
+Heston European option pricer (closed-form integrals).
+Dependencies: numpy, scipy
+
+Usage:
+    from heston_pricer import heston_price
+import cmath
+from math import log, exp, pi
+from scipy import integrate
+    res = heston_price(S0=100, K=100, T=1.0, r=0.03, q=0.0,
+                       kappa=2.0, theta=0.04, sigma=0.3, rho=-0.7, v0=0.04)
+    print(res)  # dict with call, put, P1, P2
+"""
+def mc_heston_put(S0, K, T, r, kappa, theta, sigma, rho, v0, q=0.0,
+                  Npaths=500_000, Nsteps=100, antithetic=True):
+    """Monte Carlo simulation for Heston put option"""
+    dt = T / Nsteps
+    S = np.full(Npaths, S0, dtype=float)
+    v = np.full(Npaths, v0, dtype=float)
+    
+    if antithetic:
+        Npaths_half = Npaths // 2
+        z1 = np.random.randn(Npaths_half, Nsteps)
+        z2 = rho * z1 + np.sqrt(1 - rho**2) * np.random.randn(Npaths_half, Nsteps)
+        
+        # Use antithetic variates
+        z1_full = np.vstack([z1, -z1])
+        z2_full = np.vstack([z2, -z2])
+    else:
+        z1_full = np.random.randn(Npaths, Nsteps)
+        z2_full = rho * z1_full + np.sqrt(1 - rho**2) * np.random.randn(Npaths, Nsteps)
+    
+    for step in range(Nsteps):
+        z1_step = z1_full[:, step]
+        z2_step = z2_full[:, step]
+        
+        # Euler scheme for variance with full truncation
+        v_new = v + kappa * (theta - np.maximum(v, 0)) * dt + \
+                sigma * np.sqrt(np.maximum(v, 0) * dt) * z2_step
+        v = np.maximum(v_new, 0)
+        
+        # Stock price evolution - include dividend yield q
+        S = S * np.exp((r - q - 0.5 * np.maximum(v, 0)) * dt + 
+                       np.sqrt(np.maximum(v, 0) * dt) * z1_step)
+    
+    payoff = np.maximum(K - S, 0)
+    price = np.exp(-r * T) * np.mean(payoff)
+    std_error = np.exp(-r * T) * np.std(payoff) / np.sqrt(Npaths)
+    
+    return price, std_error  # Return both values
