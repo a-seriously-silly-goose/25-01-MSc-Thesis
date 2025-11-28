@@ -57,8 +57,8 @@ class ActorCriticPPO:
 
         # Paths for saving files
         self.LOG_FILE = os.path.join(self.repo, "log.txt")
-        self.PI_MODEL_FILE = os.path.join(self.repo, "PI_model.pt")
-        self.V_MODEL_FILE = os.path.join(self.repo, "V_model.pt")
+        self.PI_MODEL_FILE = os.path.join(self.repo, "PPO_PI_model.pt")
+        self.V_MODEL_FILE = os.path.join(self.repo, "PPO_V_model.pt")
         self.PLOT_DIR = os.path.join(self.repo, "plots")
 
         os.makedirs(self.repo, exist_ok=True)
@@ -211,6 +211,8 @@ class ActorCriticPPO:
 
         # Freeze policy: collect rollouts with current policy parameters (no grads)
         self.policy.eval()
+        self.value_net.train()
+
         with T.no_grad():
             # data = self.policy_rollout(num_trajectories=n_rollouts, track_policy_gradients=False)
             data = self._vectorized_rollout(batch_size=n_rollouts, max_steps=rollout_horizon, device=device)
@@ -253,14 +255,17 @@ class ActorCriticPPO:
                 # Mean squared error to returns (equivalent to minimizing GAE^2)
                 value_loss = F.mse_loss(value_pred, batch_returns)
 
-                self.value_optim.zero_grad()
+
                 value_loss.backward()
                 self.value_optim.step()
-
+                
+            self.value_optim.zero_grad()
             value_loss_hist.append(value_loss.item())
 
         # Return updated critic and diagnostics
-        self.policy.train()
+
+        self.value_net.eval()
+        self.policy.eval()
         return {"value_loss_hist": value_loss_hist}
 
 
@@ -283,10 +288,10 @@ class ActorCriticPPO:
 
         # We'll freeze critic when computing value estimates
         self.value_net.eval()
+        self.policy.train()
 
         for epoch in range(actor_epochs):
             # Per Algorithm 4 you simulate rollouts of current policy for this epoch
-            self.policy.eval()
             with T.no_grad():
                 data = self._vectorized_rollout(batch_size=n_rollouts, max_steps=rollout_horizon, device=device)
                 # data = self.policy_rollout(num_trajectories=n_rollouts, track_policy_gradients=False)
@@ -372,15 +377,16 @@ class ActorCriticPPO:
                     total_loss = policy_loss + entropy_loss
 
                     # Update actor
-                    self.policy_optim.zero_grad()
                     total_loss.backward()
                     self.policy_optim.step()
 
                     policy_loss_hist.append(policy_loss.item())
                     ent_hist.append(entropy.item())
 
-            self.policy.train()
-            self.value_net.train()
+                self.policy_optim.zero_grad()
+
+        self.policy.eval()
+        self.value_net.eval()
 
         return {"policy_loss_hist": policy_loss_hist, "entropy_hist": ent_hist}
 
@@ -403,11 +409,12 @@ class ActorCriticPPO:
             critic_info = self.update_critic(
                 n_rollouts=self.N_rollouts,
                 rollout_horizon=self.env.Ndt,
-                critic_epochs=1,              # one epoch per loop
+                critic_epochs=self.K_crit,              
                 batch_size=self.batch_size
             )
 
-            if (pre_epoch + 1) % 100 == 0:
+            # if (pre_epoch + 1) % self.loss_print == 0:
+            if (pre_epoch + 1) % 1 == 0:
                 last_loss = critic_info.get("value_loss_hist", [None])[-1]
                 self.log_message(
                     f"[PPO][V init] Critic epoch {pre_epoch+1}/{self.algo_params.Nepochs_V_init} | "
@@ -437,19 +444,15 @@ class ActorCriticPPO:
                                         n_actor_updates=self.n_actor_updates)
             all_policy_losses.extend(actor_info.get("policy_loss_hist", []))
 
-            self.log_message(f"[PPO] PPO Epoch {epoch+1}/{K_PPO} | "
-                                f"Critic losses (last): {critic_info.get('value_loss_hist', [])[-1] if critic_info.get('value_loss_hist') else None} | "
-                                f"Actor loss (last): {actor_info.get('policy_loss_hist', [])[-1] if actor_info.get('policy_loss_hist') else None}")
-
-
             # Optional logging
             if (epoch + 1) % self.loss_print == 0:
                 self.save_models(self.repo)
                 self.log_message(f"[PPO] PPO Epoch {epoch+1}/{K_PPO} | "
-                                f"Critic losses (last): {critic_info.get('value_loss_hist', [])[-1] if critic_info.get('value_loss_hist') else None} | "
-                                f"Actor loss (last): {actor_info.get('policy_loss_hist', [])[-1] if actor_info.get('policy_loss_hist') else None}")
+                                f"Critic losses: {critic_info.get('value_loss_hist', [])[-1] if critic_info.get('value_loss_hist') else None} | "
+                                f"Actor loss: {actor_info.get('policy_loss_hist', [])[-1] if actor_info.get('policy_loss_hist') else None}")
                 self.plot_current_policy(epoch+1)
                 self.plot_action_vs_price(epoch+1)
+                self.plot_loss_history(all_policy_losses)
 
 
         return {"policy_loss": all_policy_losses, "value_loss": all_value_losses}
@@ -486,10 +489,26 @@ class ActorCriticPPO:
         plt.ylabel("Time to Maturity")
         plt.title(f"Replicated Delta: Epoch {epoch}")
         plot_file = os.path.join(self.PLOT_DIR, f"current_policy.png")
-        print(f"Saving policy plot to {plot_file}")
+        # print(f"Saving policy plot to {plot_file}")
         plt.savefig(plot_file)
         plt.close()
 
+    def plot_loss_history(self, policy_loss_history):
+        """
+        Plot the policy loss history over training epochs.
+        """
+        plt.figure(figsize=(10, 6))
+        plt.plot(policy_loss_history, label="Policy Loss")
+        plt.xlabel("Training Steps")
+        plt.ylabel("Policy Loss")
+        plt.title("Policy Loss History")
+        plt.legend()
+        plt.grid(True)
+
+        # Save the plot
+        plot_file = os.path.join(self.PLOT_DIR, "policy_loss_history.png")
+        plt.savefig(plot_file)
+        plt.close()
     
     def plot_action_vs_price(self, time_fixed=None):
         """
@@ -576,7 +595,7 @@ class ActorCriticPPO:
         os.makedirs(save_dir, exist_ok=True)
         T.save(self.policy.state_dict(), self.PI_MODEL_FILE)
         T.save(self.value_net.state_dict(), self.V_MODEL_FILE)
-        self.log_message(f"Models saved to {save_dir}")
+        # self.log_message(f"Models saved to {save_dir}")
 
     def load_models(self, load_dir):
         """Load policy and value networks"""

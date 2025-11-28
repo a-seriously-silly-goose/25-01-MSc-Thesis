@@ -25,6 +25,55 @@ v_debug:
     Mtransitions : 5 # number of additional transitions for each state
     Nepochs : 4 # number of epochs of the whole algorithm
     gamma : 1 # discount factor
+    Nepochs_V_init : 50 # number of epochs for the estimation of V during the first epoch
+    Nepochs_V : 3 # number of epochs for the estimation of V
+    lr_V : .0005 # learning rate of the neural net associated with V
+    batch_V : 20 # number of trajectories for each mini-batch in estimating V
+    hidden_V : 16 # number of hidden nodes in the neural net associated with V
+    layers_V : 4 # number of layers in the neural net associated with V
+    Nepochs_pi : 10 # number of epoch for the update of pi
+    lr_pi : .0005 # learning rate of the neural net associated with pi
+    batch_pi : 20 # number of trajectories for each mini-batch when updating pi
+    hidden_pi : 16 # number of hidden nodes in the neural net associated with pi
+    layers_pi : 3 # number of layers in the neural net associated with pi
+    seed : 42 # (int or None) set seed for replication purposes
+    clip_epsilon: 0.1 # clip epsilon for the policy gradient
+    gae_lambda: 0.95 # GAE lambda for advantage estimation
+    entropy_coef: 0.01 # entropy coefficient for the policy loss
+    n_critic_updates: 10 # number of updates for the critic per epoch
+    n_actor_updates: 10 # number of updates for the actor per epoch
+
+  riskParams:
+    method: 'mean'
+
+  runParams:
+# the same parameters as CJ21
+# the same parameters as CJ21
+v_debug2:
+  envParams:
+    S0: 10 # initial stock price
+    K: 10 # strike price
+    v0: 0.04 # initial variance
+    sigma: 0.2 # volatility in GBM
+    kappa: 9
+    theta: 0.0625
+    eta: 1
+    T: .08333333 # time to maturity
+    rho: -0.5
+    mu: 0.1 # drift in GBM
+    r: 0.01 # risk-free rate
+    B0: 0 # initial bank account
+    epsilon: 0 # transaction cost
+    max_alpha: 3 # maximum position
+    Ndt: 31 # number of time steps
+
+  algoParams:
+   # note: the next two must match!
+    Ntrajectories : 50 # number of generated trajectories
+    Mtransitions : 5 # number of additional transitions for each state
+    Nepochs_BC: 10
+    Nepochs : 10 # number of epochs of the whole algorithm
+    gamma : 1 # discount factor
     Nepochs_V_init : 10 # number of epochs for the estimation of V during the first epoch
     Nepochs_V : 3 # number of epochs for the estimation of V
     lr_V : .0005 # learning rate of the neural net associated with V
@@ -40,6 +89,7 @@ v_debug:
     clip_epsilon: 0.1 # clip epsilon for the policy gradient
     gae_lambda: 0.95 # GAE lambda for advantage estimation
     entropy_coef: 0.01 # entropy coefficient for the policy loss
+    lambda_entropy: 0.01 # entropy coefficient for behavior cloning
     n_critic_updates: 10 # number of updates for the critic per epoch
     n_actor_updates: 10 # number of updates for the actor per epoch
 
@@ -70,7 +120,8 @@ vCJ21:
    # note: the next two must match!
     Ntrajectories : 500 # number of generated trajectories
     Mtransitions : 500 # number of additional transitions for each state
-    Nepochs : 400 # number of epochs of the whole algorithm
+    Nepochs : 4000 # number of epochs of the whole algorithm
+    Nepochs_BC: 20000
     gamma : 1 # discount factor
     Nepochs_V_init : 1500 # number of epochs for the estimation of V during the first epoch
     Nepochs_V : 300 # number of epochs for the estimation of V
@@ -87,6 +138,7 @@ vCJ21:
     clip_epsilon: 0.1 # clip epsilon for the policy gradient
     gae_lambda: 0.95 # GAE lambda for advantage estimation
     entropy_coef: 0.01 # entropy coefficient for the policy loss
+    lambda_entropy: 0.01 # entropy coefficient for behavior cloning
     n_critic_updates: 10 # number of updates for the critic per epoch
     n_actor_updates: 10 # number of updates for the actor per epoch
 

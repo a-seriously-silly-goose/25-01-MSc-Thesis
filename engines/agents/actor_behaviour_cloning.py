@@ -42,7 +42,7 @@ class BehaviorReplicationAgent:
 
         # Paths for saving files
         self.LOG_FILE = os.path.join(self.repo, "log.txt")
-        self.PI_MODEL_FILE = os.path.join(self.repo, "PI_model.pt")
+        self.PI_MODEL_FILE = os.path.join(self.repo, "BC_PI_model.pt")
         self.PLOT_DIR = os.path.join(self.repo, "plots")
 
         os.makedirs(self.repo, exist_ok=True)
@@ -221,20 +221,27 @@ class BehaviorReplicationAgent:
             self.policy_optim.step()
 
             if epoch % (self.loss_print // 2) == 0:
-                print(self.memory_manager.get_memory_info())
+                mem_info = self.memory_manager.get_memory_info()
+                if mem_info:
+                    print(f"[BC] Epoch {epoch}: {mem_info}")
                 self.memory_manager.clear_cache()
 
             # Logging
             if epoch % self.loss_print == 0 or epoch == epochs - 1:
-                print(f"[BC] Epoch {epoch}/{epochs} — Loss={loss.item():.5f}")
+                print(f"[BC] Epoch {epoch}/{epochs} | Loss={loss.item():.5f}")
                 with open(self.LOG_FILE, "a") as log_f:
                     log_f.write(f"{epoch},{loss.item():.5f}\n")
+
                 self.plot_current_policy(epoch)
                 self.plot_action_vs_price()
                 self.plot_action_vs_time()
+                self.plot_loss_history(loss_history)
                 self.save_policy()
 
         self.policy.eval()
+        with open(self.LOG_FILE, "a") as log_f:
+            log_f.write(f"Training completed at {datetime.now()}\n")
+
         return loss_history
 
     def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
@@ -258,23 +265,20 @@ class BehaviorReplicationAgent:
         total_loss = MLE_loss - lambda_entropy * Entropy_loss  # Combine losses with entropy regularization
         return total_loss
 
-    # def get_total_loss(self, mu, sigma, expert_actions, lambda_entropy):
-    #     """
-    #     Compute loss using PyTorch's Normal distribution for better numerical stability.
-    #     """
-    #     expert_actions = expert_actions.view_as(mu)
-        
-    #     # Create normal distribution
-    #     dist = T.distributions.Normal(mu, sigma)
-        
-    #     # Negative log likelihood loss
-    #     nll_loss = -dist.log_prob(expert_actions).mean()
-        
-    #     # Entropy regularization (encourages exploration)
-    #     entropy = dist.entropy().mean()
-        
-    #     total_loss = nll_loss - lambda_entropy * entropy
-    #     return total_loss
+    def plot_loss_history(self, loss_history):
+        """
+        Plot the loss history over training epochs.
+        """
+        plt.figure(figsize=(10, 6))
+        plt.plot(loss_history, label="Behavior Cloning Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Behavior Cloning Loss History")
+        plt.legend()
+        plt.grid(True)
+        plot_file = os.path.join(self.PLOT_DIR, "BC_loss_history.png")
+        plt.savefig(plot_file)
+        plt.close()
 
     def plot_current_policy(self, epoch):
         """

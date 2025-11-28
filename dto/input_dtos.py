@@ -26,6 +26,7 @@ class AlgoParams:
     Ntrajectories: int
     Mtransitions: int
     Nepochs: int
+    Nepochs_BC: int
     gamma: float
     Nepochs_V_init: int
     Nepochs_V: int
@@ -40,6 +41,7 @@ class AlgoParams:
     layers_pi: int
     seed: Optional[int]
     clip_epsilon: float
+    lambda_entropy: float
     gae_lambda: float
     entropy_coef: float
     n_critic_updates: int
