@@ -119,7 +119,7 @@ vCJ21:
   algoParams:
    # note: the next two must match!
     Ntrajectories : 500 # number of generated trajectories
-    Mtransitions : 500 # number of additional transitions for each state
+    Mtransitions : 5 # number of additional transitions for each state
     Nepochs : 4000 # number of epochs of the whole algorithm
     Nepochs_BC: 20000
     gamma : 1 # discount factor

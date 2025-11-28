@@ -36,7 +36,7 @@ class ActorCriticPPO:
         self.policy = policy_net
         self.value_net = value_net
         self.hyperparameters_version = hyperparameters_version
-        self.loss_print = 2  # Print loss every n epochs
+        self.loss_print = 100  # Print loss every n epochs
 
         # Determine device
         self.device = T.device("cuda" if T.cuda.is_available() else "cpu")
@@ -413,7 +413,7 @@ class ActorCriticPPO:
             )
 
             # if (pre_epoch + 1) % self.loss_print == 0:
-            if (pre_epoch + 1) % 1 == 0:
+            if (pre_epoch + 1) % self.loss_print == 0:
                 last_loss = critic_info.get("value_loss_hist", [None])[-1]
                 self.log_message(
                     f"[PPO][V init] Critic epoch {pre_epoch+1}/{self.algo_params.Nepochs_V_init} | "
