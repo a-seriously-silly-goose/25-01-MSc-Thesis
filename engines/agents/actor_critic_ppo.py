@@ -292,31 +292,30 @@ class ActorCriticPPO:
 
         for epoch in range(actor_epochs):
             # Per Algorithm 4 you simulate rollouts of current policy for this epoch
+            data = self._vectorized_rollout(batch_size=n_rollouts, max_steps=rollout_horizon, device=device)
+            # data = self.policy_rollout(num_trajectories=n_rollouts, track_policy_gradients=False)
+            states = data["states"]      # [T, B, state_dim]
+            actions = data["actions"]    # [T, B]
+            rewards = data["rewards"]    # [T, B]
+            dones = data["dones"]        # [T, B]
+            old_log_probs = data["log_probs"]  # [T, B]
+            final_states = data["final_states"]  # [B, state_dim]
+
+            if T.isnan(states).any() or T.isnan(actions).any() or T.isnan(rewards).any():
+                self.log_message("WARNING: NaN detected in rollout data!")
+                break
+
+            # Critic (frozen) provides values used by Algorithm 4
+            # Evaluate V~(s_t) for all states
+            T_steps, B = states.shape[:2]
+            flat_states = states.reshape(-1, states.size(-1))
             with T.no_grad():
-                data = self._vectorized_rollout(batch_size=n_rollouts, max_steps=rollout_horizon, device=device)
-                # data = self.policy_rollout(num_trajectories=n_rollouts, track_policy_gradients=False)
-                states = data["states"]      # [T, B, state_dim]
-                actions = data["actions"]    # [T, B]
-                rewards = data["rewards"]    # [T, B]
-                dones = data["dones"]        # [T, B]
-                old_log_probs = data["log_probs"]  # [T, B]
-                final_states = data["final_states"]  # [B, state_dim]
+                flat_values = self.value_net(flat_states).squeeze(-1)
+            values = flat_values.reshape(T_steps, B)
 
-                if T.isnan(states).any() or T.isnan(actions).any() or T.isnan(rewards).any():
-                    self.log_message("WARNING: NaN detected in rollout data!")
-                    break
-
-                # Critic (frozen) provides values used by Algorithm 4
-                # Evaluate V~(s_t) for all states
-                T_steps, B = states.shape[:2]
-                flat_states = states.reshape(-1, states.size(-1))
-                with T.no_grad():
-                    flat_values = self.value_net(flat_states).squeeze(-1)
-                values = flat_values.reshape(T_steps, B)
-
-                # Next value for bootstrapping
-                with T.no_grad():
-                    next_value = self.value_net(final_states).squeeze(-1)
+            # Next value for bootstrapping
+            with T.no_grad():
+                next_value = self.value_net(final_states).squeeze(-1)
 
             # Compute GAE using frozen critic values
             advantages, returns = self.compute_gae(rewards, values, next_value, dones)
@@ -347,7 +346,7 @@ class ActorCriticPPO:
                         continue
 
                     # Evaluate policy on batch
-                    mu, sigma = self.policy.forward(batch_states)
+                    mu, sigma = self.policy(batch_states)
                                     # Add NaN check for policy outputs
                     if T.isnan(mu).any() or T.isnan(sigma).any():
                         self.log_message("CRITICAL: Policy outputting NaN values!")
